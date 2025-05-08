@@ -2,10 +2,16 @@
 
 namespace CoreLib.Models.Entitys
 {
+    [Table("PreKeys")]
     internal class PreKey
     {
+        /// <summary>
+        /// Shake256 (PK)
+        /// </summary>
         [PrimaryKey]
         public string Id { get; set; }
+
+        public string DeviceId { get; set; }
 
         [NotNull]
         public byte[] PK { get; set; }
@@ -13,6 +19,9 @@ namespace CoreLib.Models.Entitys
         [NotNull]
         public byte[] PrK { get; set; }
 
+        /// <summary>
+        /// Signature of the PK
+        /// </summary>
         [NotNull]
         public byte[] Signature { get; set; }
     }
