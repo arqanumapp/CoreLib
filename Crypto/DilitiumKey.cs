@@ -10,18 +10,18 @@ namespace CoreLib.Crypto
     {
         private static readonly SecureRandom Random = new SecureRandom();
 
-        public async Task<(AsymmetricKeyParameter PublicKey, AsymmetricKeyParameter PrivateKey)> GenerateKeyPairAsync()
+        public async Task<(MLDsaPublicKeyParameters PublicKey, MLDsaPrivateKeyParameters PrivateKey)> GenerateKeyPairAsync()
         {
             return await Task.Run(() =>
             {
                 var keyGen = new MLDsaKeyPairGenerator();
                 keyGen.Init(new MLDsaKeyGenerationParameters(Random, MLDsaParameters.ml_dsa_87));
                 AsymmetricCipherKeyPair keyPair = keyGen.GenerateKeyPair();
-                return (keyPair.Public, keyPair.Private);
+                return ((MLDsaPublicKeyParameters)keyPair.Public, (MLDsaPrivateKeyParameters)keyPair.Private);
             });
         }
 
-        public async Task<byte[]> SignAsync(byte[] data, AsymmetricKeyParameter privateKey)
+        public async Task<byte[]> SignAsync(byte[] data, MLDsaPrivateKeyParameters privateKey)
         {
             return await Task.Run(() =>
             {

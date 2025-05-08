@@ -18,15 +18,15 @@ namespace CoreLib.Models.Entitys
         public string DeviceName { get; set; }
 
         [NotNull]
-        public string SPK { get; set; }
+        public byte[] SPK { get; set; }
 
         [NotNull]
-        public string SPrK { get; set; }
+        public byte[] SPrK { get; set; }
 
         /// <summary>
         /// Signature of the SPK
         /// </summary>
         [NotNull]
-        public string SPKSignature { get; set; } 
+        public byte[] SPKSignature { get; set; } 
     }
 }
