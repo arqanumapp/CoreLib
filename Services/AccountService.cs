@@ -26,7 +26,6 @@ namespace CoreLib.Services
                     var preKey = await preKeyService.CreateAsync(DilitiumPrK, deviceData.Id);
                     preKeys.Add(preKey);
                 }
-                account.Id = 
                 //TODO: Send data to server and save in local storage
                 //Add proof of work?
                 return true;
