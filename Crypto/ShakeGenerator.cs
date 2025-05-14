@@ -30,9 +30,9 @@ namespace CoreLib.Crypto
             });
         }
 
-        public async Task<string> GetHex(byte[] bytes) => await Task.Run(() =>
+        public async Task<string> GetString(byte[] bytes) => await Task.Run(() =>
         {
-            return Convert.ToHexString(bytes).ToLowerInvariant();
+            return Convert.ToBase64String(bytes);
         });
     }
 }

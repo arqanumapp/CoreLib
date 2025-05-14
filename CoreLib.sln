@@ -5,6 +5,11 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreLib", "CoreLib.csproj", "{4F332E9C-2828-BDF6-1958-93D2F7D44412}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Teat", "..\Teat\Teat.csproj", "{97ACEC44-09EF-4EDF-ACCE-54C3FB7B4ACF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4F332E9C-2828-BDF6-1958-93D2F7D44412} = {4F332E9C-2828-BDF6-1958-93D2F7D44412}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,8 +20,15 @@ Global
 		{4F332E9C-2828-BDF6-1958-93D2F7D44412}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F332E9C-2828-BDF6-1958-93D2F7D44412}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F332E9C-2828-BDF6-1958-93D2F7D44412}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97ACEC44-09EF-4EDF-ACCE-54C3FB7B4ACF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97ACEC44-09EF-4EDF-ACCE-54C3FB7B4ACF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97ACEC44-09EF-4EDF-ACCE-54C3FB7B4ACF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97ACEC44-09EF-4EDF-ACCE-54C3FB7B4ACF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {25D53140-14F5-4748-90C7-4194925B34FF}
 	EndGlobalSection
 EndGlobal

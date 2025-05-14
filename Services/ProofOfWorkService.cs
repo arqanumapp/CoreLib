@@ -5,7 +5,7 @@ namespace CoreLib.Services
 {
     internal class ProofOfWorkService
     {
-        public static async Task<(string nonce, string hash)> FindProofOfWork(string publicKey, int difficulty = 1)
+        public async Task<(string nonce, string hash)> FindProofOfWork(string PK)
         {
             using var rng = RandomNumberGenerator.Create();
             var buffer = new byte[4];
@@ -15,9 +15,9 @@ namespace CoreLib.Services
             {
                 rng.GetBytes(buffer);
                 var nonce = BitConverter.ToUInt32(buffer, 0).ToString("X");
-                string hash = Convert.ToHexString(await shakeGenerator.ComputeHash128(publicKey + nonce)).ToLowerInvariant();
+                string hash = Convert.ToBase64String(await shakeGenerator.ComputeHash128(PK + nonce)).ToLowerInvariant();
 
-                if (hash.StartsWith(new string('0', difficulty)))
+                if (hash.StartsWith("000"))
                     return (nonce, hash);
 
                 attempts++;

@@ -24,9 +24,14 @@ namespace CoreLib.Services
                 device.SPrK = dilithiumPrivateKey.GetEncoded();
 
                 device.SPKSignature = await dilithiumKey.SignAsync(device.SPK, dilithiumPrivateKey);
+                var shakeGenerator = new ShakeGenerator();
 
-                device.Id = await new ShakeGenerator().GetHex(await new ShakeGenerator().ComputeHash256(device.SPK));
+                var id = await shakeGenerator.ComputeHash256(device.SPK, 64);
+                device.Id = await shakeGenerator.GetString(id);
+
                 return (device, dilithiumPrivateKey);
+
+
             }
             catch (Exception ex)
             {

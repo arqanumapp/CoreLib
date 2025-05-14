@@ -11,12 +11,12 @@ namespace CoreLib.Services
             try
             {
                 var kyberKey = new KyberKey();
-                var shake256 = new Shake256Generator();
+                var shakeGen = new ShakeGenerator();
                 var dilithiumKey = new DilitiumKey();
                 var (publicKey, privateKey) = await kyberKey.GenerateKeyPairAsync();
                 var preKey = new PreKey
                 {
-                    Id = await shake256.GetHex(await shake256.ComputeHash(publicKey.GetEncoded())),
+                    Id = await shakeGen.GetString(await shakeGen.ComputeHash256(publicKey.GetEncoded(),64)),
                     PK = publicKey.GetEncoded(),
                     PrK = privateKey.GetEncoded(),
                     Signature = await dilithiumKey.SignAsync(publicKey.GetEncoded(), dilithiumPrivateKey)
