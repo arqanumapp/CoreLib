@@ -3,7 +3,13 @@ using System.Text;
 
 namespace CoreLib.Crypto
 {
-    internal class ShakeGenerator
+    public interface IShakeGenerator
+    {
+        Task<byte[]> ComputeHash256(byte[] input, int outputLength = 32);
+        Task<byte[]> ComputeHash128(string input);
+        Task<string> GetString(byte[] bytes);
+    }
+    internal class ShakeGenerator : IShakeGenerator
     {
         public async Task<byte[]> ComputeHash256(byte[] input, int outputLength = 32)
         {

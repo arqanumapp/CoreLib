@@ -2,7 +2,13 @@
 
 namespace CoreLib.Storage
 {
-    internal class PreKeyStorage : BaseStorage<PreKey>
+    public interface IPreKeyStorage
+    {
+        Task<bool> SavePreKeyAsync(PreKey preKey);
+        Task<PreKey?> GetPreKeyAsync(string id);
+        Task<bool> AddRangeAsync(List<PreKey> preKeys);
+    }
+    internal class PreKeyStorage : BaseStorage<PreKey>, IPreKeyStorage
     {
         public async Task<bool> SavePreKeyAsync(PreKey preKey)
         {

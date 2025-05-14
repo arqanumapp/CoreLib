@@ -6,9 +6,17 @@ using Org.BouncyCastle.Security;
 
 namespace CoreLib.Crypto
 {
-    internal class DilitiumKey
+    public interface IMLDsaKey
     {
-        private static readonly SecureRandom Random = new SecureRandom();
+        Task<(MLDsaPublicKeyParameters PublicKey, MLDsaPrivateKeyParameters PrivateKey)> GenerateKeyPairAsync();
+        Task<byte[]> SignAsync(byte[] data, MLDsaPrivateKeyParameters privateKey);
+        Task<bool> VerifyAsync(byte[] publicKeyBytes, byte[] message, byte[] signature);
+        Task<MLDsaPublicKeyParameters> RecoverPublicKeyAsync(byte[] publicKeyBytes);
+        Task<MLDsaPrivateKeyParameters> RecoverPrivateKeyAsync(byte[] privateKeyBytes);
+    }
+    internal class MLDsaKey : IMLDsaKey
+    {
+        private SecureRandom Random = new SecureRandom();
 
         public async Task<(MLDsaPublicKeyParameters PublicKey, MLDsaPrivateKeyParameters PrivateKey)> GenerateKeyPairAsync()
         {

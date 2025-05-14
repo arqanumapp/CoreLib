@@ -5,7 +5,13 @@ using Org.BouncyCastle.Security;
 
 namespace CoreLib.Crypto
 {
-    internal class KyberKey
+    public interface IMLKemKey
+    {
+        Task<(MLKemPublicKeyParameters publicKey, MLKemPrivateKeyParameters privateKey)> GenerateKeyPairAsync();
+        Task<(byte[] kemCipherText, byte[] sharedSecret)> EncapsulateAsync(byte[] receiverPublicKeyBytes);
+        Task<byte[]> DecapsulateAsync(byte[] kemCipherText, byte[] privateKey);
+    }
+    internal class MLKemKey : IMLKemKey
     {
         public async Task<(MLKemPublicKeyParameters publicKey, MLKemPrivateKeyParameters privateKey)> GenerateKeyPairAsync()
         {

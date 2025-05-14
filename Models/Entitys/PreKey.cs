@@ -3,7 +3,7 @@
 namespace CoreLib.Models.Entitys
 {
     [Table("PreKeys")]
-    internal class PreKey
+    public class PreKey
     {
         /// <summary>
         /// Shake256 (PK)

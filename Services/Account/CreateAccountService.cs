@@ -11,7 +11,14 @@ using System.Text;
 
 namespace CoreLib.Services.Account
 {
-    public class CreateAccountService(IDeviceInfoProvider deviceInfoProvider)
+    public class CreateAccountService(IDeviceInfoProvider deviceInfoProvider, 
+        IDeviceService deviceService, 
+        IPreKeyService preKeyService, 
+        IMLDsaKey mLDsaKey,
+        IProofOfWorkService proofOfWork,
+        IAccountStorage accountStorage,
+        IDeviceStorage deviceStorage,
+        IPreKeyStorage preKeyStorage)
     {
         public async Task<bool> CreateAsync(string nickName)
         {
@@ -22,17 +29,13 @@ namespace CoreLib.Services.Account
                     NickName = nickName
                 };
 
-                var deviceService = new DeviceService();
-
-                var (deviceData, DilitiumPrK) = await deviceService.CreateAsync("test");
-
-                var preKeyService = new PreKeyService();
+                var (deviceData, mLDsaPrK) = await deviceService.CreateAsync(await deviceInfoProvider.GetDeviceName());
 
                 List<PreKey> preKeys = [];
 
                 for (int i = 0; i < 50; i++)
                 {
-                    var preKey = await preKeyService.CreateAsync(DilitiumPrK, deviceData.Id);
+                    var preKey = await preKeyService.CreateAsync(mLDsaPrK, deviceData.Id);
                     preKeys.Add(preKey);
                 }
 
@@ -41,25 +44,19 @@ namespace CoreLib.Services.Account
 
                 var request = await CreateRequestDTO(account, deviceData, preKeys);
 
-                var requestResult = await RegisterAccountAsync(request, DilitiumPrK);
+                var requestResult = await RegisterAccountAsync(request, mLDsaPrK);
 
                 if (requestResult)
                 {
-                    var accountStorage = new AccountStorage();
-
                     if (!await accountStorage.SaveAccountAsync(account))
                     {
                         throw new Exception("Error saving account");
                     }
 
-                    var deviceStorage = new DeviceStorage();
-
                     if (!await deviceStorage.SaveDeviceAsync(deviceData))
                     {
                         throw new Exception("Error saving device");
                     }
-
-                    var preKeyStorage = new PreKeyStorage();
 
                     if (!await preKeyStorage.AddRangeAsync(preKeys))
                     {
@@ -84,8 +81,7 @@ namespace CoreLib.Services.Account
             string rawJson = JsonConvert.SerializeObject(request, settings);
             byte[] rawBytes = Encoding.UTF8.GetBytes(rawJson);
 
-            var dilithiumKey = new DilitiumKey();
-            byte[] signature = await dilithiumKey.SignAsync(rawBytes, mLDsaPrivateKey);
+            byte[] signature = await mLDsaKey.SignAsync(rawBytes, mLDsaPrivateKey);
 
             byte[] compressedBytes;
             using (var uncompressedStream = new MemoryStream(rawBytes))
@@ -98,8 +94,6 @@ namespace CoreLib.Services.Account
 
                 compressedBytes = compressedStream.ToArray();
             }
-
-            Console.WriteLine(BitConverter.ToString([.. compressedBytes.Take(64)]));
 
             var httpClient = new HttpClient();
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://localhost:7111/api/account/register")
@@ -120,7 +114,6 @@ namespace CoreLib.Services.Account
 
         private async Task<CreateAccountRequest> CreateRequestDTO(CoreLib.Models.Entitys.Account account, Device device, List<PreKey> preKeys)
         {
-            var proofOfWork = new ProofOfWorkService();
             var (nonce, proof) = await proofOfWork.FindProofOfWork(Convert.ToBase64String(device.SPK));
             CreateAccountRequest accountRequest = new()
             {

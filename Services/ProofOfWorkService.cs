@@ -3,14 +3,17 @@ using System.Security.Cryptography;
 
 namespace CoreLib.Services
 {
-    internal class ProofOfWorkService
+    public interface IProofOfWorkService
+    {
+        Task<(string nonce, string hash)> FindProofOfWork(string PK);
+    }
+    internal class ProofOfWorkService(IShakeGenerator shakeGenerator) : IProofOfWorkService
     {
         public async Task<(string nonce, string hash)> FindProofOfWork(string PK)
         {
             using var rng = RandomNumberGenerator.Create();
             var buffer = new byte[4];
             int attempts = 0;
-            var shakeGenerator = new ShakeGenerator();
             while (true)
             {
                 rng.GetBytes(buffer);

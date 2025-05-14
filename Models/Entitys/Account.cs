@@ -2,7 +2,8 @@
 
 namespace CoreLib.Models.Entitys
 {
-    internal class Account
+    [Table("Account")]
+    public class Account
     {
         /// <summary>
         /// Shake256 first SPK

@@ -2,7 +2,12 @@
 
 namespace CoreLib.Storage
 {
-    internal class AccountStorage : BaseStorage<Account>
+    public interface IAccountStorage
+    {
+        Task<bool> SaveAccountAsync(Account account);
+        Task<Account?> GetAccountAsync(string id);
+    }
+    internal class AccountStorage : BaseStorage<Account>, IAccountStorage
     {
         public async Task<bool> SaveAccountAsync(Account account)
         {

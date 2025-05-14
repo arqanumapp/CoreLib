@@ -4,34 +4,30 @@ using Org.BouncyCastle.Crypto.Parameters;
 
 namespace CoreLib.Services
 {
-    internal class DeviceService
+    public interface IDeviceService
+    {
+        Task<(Device, MLDsaPrivateKeyParameters)> CreateAsync(string deviceName);
+    }
+    internal class DeviceService(IMLDsaKey mLDsaKey, IShakeGenerator shakeGenerator) : IDeviceService
     {
         public async Task<(Device, MLDsaPrivateKeyParameters)> CreateAsync(string deviceName)
         {
             try
             {
-                Device device = new();
-                device.DeviceName = deviceName;
+                var (mLDsaPK, MlDsaPrK) = await mLDsaKey.GenerateKeyPairAsync();
 
-                var preKeyService = new PreKeyService();
+                Device device = new()
+                {
+                    DeviceName = deviceName,
+                    SPK = mLDsaPK.GetEncoded(),
+                    SPrK = MlDsaPrK.GetEncoded(),
+                };
 
-                var dilithiumKey = new DilitiumKey();
+                device.SPKSignature = await mLDsaKey.SignAsync(device.SPK, MlDsaPrK);
 
-                var (dilithiumPublicKey, dilithiumPrivateKey) = await dilithiumKey.GenerateKeyPairAsync();
+                device.Id = await shakeGenerator.GetString(await shakeGenerator.ComputeHash256(device.SPK, 64));
 
-                device.SPK = dilithiumPublicKey.GetEncoded();
-
-                device.SPrK = dilithiumPrivateKey.GetEncoded();
-
-                device.SPKSignature = await dilithiumKey.SignAsync(device.SPK, dilithiumPrivateKey);
-                var shakeGenerator = new ShakeGenerator();
-
-                var id = await shakeGenerator.ComputeHash256(device.SPK, 64);
-                device.Id = await shakeGenerator.GetString(id);
-
-                return (device, dilithiumPrivateKey);
-
-
+                return (device, MlDsaPrK);
             }
             catch (Exception ex)
             {

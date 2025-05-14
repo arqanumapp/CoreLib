@@ -2,7 +2,12 @@
 
 namespace CoreLib.Storage
 {
-    internal class DeviceStorage : BaseStorage<Device>
+    public interface IDeviceStorage
+    {
+        Task<bool> SaveDeviceAsync(Device device);
+        Task<Device?> GetDeviceAsync(string id);
+    }
+    internal class DeviceStorage : BaseStorage<Device>, IDeviceStorage
     {
         public async Task<bool> SaveDeviceAsync(Device device)
         {

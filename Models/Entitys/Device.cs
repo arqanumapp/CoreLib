@@ -3,7 +3,7 @@
 namespace CoreLib.Models.Entitys
 {
     [Table("Devices")]
-    internal class Device
+    public class Device
     {
         /// <summary>
         /// Shake256 (SPK)

@@ -4,22 +4,23 @@ using Org.BouncyCastle.Crypto.Parameters;
 
 namespace CoreLib.Services
 {
-    internal class PreKeyService
+    public interface IPreKeyService
+    {
+        Task<PreKey> CreateAsync(MLDsaPrivateKeyParameters dilithiumPrivateKey, string deviceId);
+    }
+    internal class PreKeyService(IMLKemKey mLKemKey, IMLDsaKey mLDsaKey, IShakeGenerator shakeGenerator) : IPreKeyService
     {
         public async Task<PreKey> CreateAsync(MLDsaPrivateKeyParameters dilithiumPrivateKey, string deviceId)
         {
             try
             {
-                var kyberKey = new KyberKey();
-                var shakeGen = new ShakeGenerator();
-                var dilithiumKey = new DilitiumKey();
-                var (publicKey, privateKey) = await kyberKey.GenerateKeyPairAsync();
+                var (mLKemKeyPK, mLKemKeyPrK) = await mLKemKey.GenerateKeyPairAsync();
                 var preKey = new PreKey
                 {
-                    Id = await shakeGen.GetString(await shakeGen.ComputeHash256(publicKey.GetEncoded(),64)),
-                    PK = publicKey.GetEncoded(),
-                    PrK = privateKey.GetEncoded(),
-                    Signature = await dilithiumKey.SignAsync(publicKey.GetEncoded(), dilithiumPrivateKey)
+                    Id = await shakeGenerator.GetString(await shakeGenerator.ComputeHash256(mLKemKeyPK.GetEncoded(),64)),
+                    PK = mLKemKeyPK.GetEncoded(),
+                    PrK = mLKemKeyPrK.GetEncoded(),
+                    Signature = await mLDsaKey.SignAsync(mLKemKeyPK.GetEncoded(), dilithiumPrivateKey)
                 };
                 return preKey;
             }

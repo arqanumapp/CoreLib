@@ -5,7 +5,14 @@ using System.Text;
 
 namespace CoreLib.Crypto
 {
-    public class AesGCMKey
+    public interface IAesGCMKey
+    {
+        Task<byte[]> EncryptAsync(byte[] plaintext, byte[] key);
+        Task<byte[]> DecryptAsync(byte[] encryptedData, byte[] key);
+        Task<byte[]> EncryptString(string message, byte[] key);
+        Task<string> DecryptToString(byte[] encryptedData, byte[] key);
+    }
+    internal class AesGCMKey : IAesGCMKey
     {
         private const int NonceSize = 12;
         private const int TagSize = 16;
