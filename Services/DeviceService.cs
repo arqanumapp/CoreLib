@@ -21,6 +21,7 @@ namespace CoreLib.Services
                     DeviceName = deviceName,
                     SPK = mLDsaPK.GetEncoded(),
                     SPrK = MlDsaPrK.GetEncoded(),
+                    CurrentDevice = true,
                 };
 
                 device.SPKSignature = await mLDsaKey.SignAsync(device.SPK, MlDsaPrK);

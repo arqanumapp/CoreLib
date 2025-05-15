@@ -28,7 +28,7 @@ namespace CoreLib
 
             services.AddSingleton<IProofOfWorkService, ProofOfWorkService>();
 
-
+            services.AddSingleton<IAddDeviceService, AddDeviceService>();
             // Основной сервис
             services.AddSingleton<CreateAccountService>();
 

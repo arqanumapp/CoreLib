@@ -28,5 +28,7 @@ namespace CoreLib.Models.Entitys
         /// </summary>
         [NotNull]
         public byte[] SPKSignature { get; set; } 
+
+        public bool CurrentDevice { get; set; }
     }
 }

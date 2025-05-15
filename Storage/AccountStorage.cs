@@ -5,7 +5,7 @@ namespace CoreLib.Storage
     public interface IAccountStorage
     {
         Task<bool> SaveAccountAsync(Account account);
-        Task<Account?> GetAccountAsync(string id);
+        Task<Account?> GetAccountAsync();
     }
     internal class AccountStorage : BaseStorage<Account>, IAccountStorage
     {
@@ -22,11 +22,11 @@ namespace CoreLib.Storage
             }
         }
 
-        public async Task<Account?> GetAccountAsync(string id)
+        public async Task<Account?> GetAccountAsync()
         {
             try
             {
-                var account = await _database.Table<Account>().FirstOrDefaultAsync(x => x.Id == id);
+                var account = await _database.Table<Account>().FirstOrDefaultAsync();
                 return account;
             }
             catch (Exception ex)

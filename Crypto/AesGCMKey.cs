@@ -1,6 +1,7 @@
 ﻿using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
+using System;
 using System.Text;
 
 namespace CoreLib.Crypto
@@ -11,11 +12,21 @@ namespace CoreLib.Crypto
         Task<byte[]> DecryptAsync(byte[] encryptedData, byte[] key);
         Task<byte[]> EncryptString(string message, byte[] key);
         Task<string> DecryptToString(byte[] encryptedData, byte[] key);
+        Task<byte[]> GenerateKey();
     }
     internal class AesGCMKey : IAesGCMKey
     {
         private const int NonceSize = 12;
         private const int TagSize = 16;
+        public async Task<byte[]> GenerateKey()
+        {
+            return await Task.Run(() =>
+            {
+                var key = new byte[256 / 8];
+                new SecureRandom().NextBytes(key);
+                return key;
+            });
+        }
         public async Task<byte[]> EncryptAsync(byte[] plaintext, byte[] key)
         {
             return await Task.Run(() =>

@@ -6,6 +6,7 @@ namespace CoreLib.Storage
     {
         Task<bool> SaveDeviceAsync(Device device);
         Task<Device?> GetDeviceAsync(string id);
+        Task<Device?> GetCurrentDevice();
     }
     internal class DeviceStorage : BaseStorage<Device>, IDeviceStorage
     {
@@ -21,7 +22,18 @@ namespace CoreLib.Storage
                 return false;
             }
         }
-
+        public async Task<Device?> GetCurrentDevice()
+        {
+            try
+            {
+                var device = await _database.Table<Device>().FirstOrDefaultAsync(x => x.CurrentDevice == true);
+                return device;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
         public async Task<Device?> GetDeviceAsync(string id)
         {
             try
