@@ -66,9 +66,12 @@ namespace CoreLib.Services.Account
                 };
 
                 string rawPayloadJson = JsonConvert.SerializeObject(payload, settings);
+
                 byte[] rawPayloadBytes = Encoding.UTF8.GetBytes(rawPayloadJson);
+
                 var currentSPrK = await mLDsaKey.RecoverPrivateKeyAsync(currentDevice.SPrK);
-                byte[] rawPayloadSignature = await mLDsaKey.SignAsync(rawPayloadBytes, currentSPrK);
+
+                byte[] rawNewDeviceIDSignature = await mLDsaKey.SignAsync(Encoding.UTF8.GetBytes(payload.Id), currentSPrK);
 
                 byte[] aesKeyBytes = Convert.FromBase64String(aesKey);
 
@@ -78,7 +81,7 @@ namespace CoreLib.Services.Account
                     TrustedDeviceId = currentDevice.Id,
                     TempId = Convert.ToBase64String(await shakeGenerator.ComputeHash256(aesKeyBytes, 64)),
                     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    TrustedSignature = Convert.ToBase64String(await aesGCMKey.EncryptAsync(rawPayloadSignature, aesKeyBytes)),
+                    TrustedSignature = Convert.ToBase64String(await aesGCMKey.EncryptAsync(rawNewDeviceIDSignature, aesKeyBytes)),
                     PayloadHash = Convert.ToBase64String(await shakeGenerator.ComputeHash256(rawPayloadBytes, 64)),
                 };
                 string rawRequestJson = JsonConvert.SerializeObject(request, settings);
