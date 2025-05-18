@@ -41,7 +41,7 @@ namespace CoreLib.Services.Account
 
                 var shakeGen = new ShakeGenerator();
                 account.Id = await shakeGen.GetString(await shakeGen.ComputeHash256(deviceData.SPK, 64));
-
+                deviceData.AccountId = account.Id;
                 var request = await CreateRequestDTO(account, deviceData, preKeys);
 
                 var requestResult = await RegisterAccountAsync(request, mLDsaPrK);

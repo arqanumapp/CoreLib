@@ -3,16 +3,16 @@ using CoreLib.Helpers;
 using CoreLib.Models.Dtos.Device.Add;
 using CoreLib.Models.Entitys;
 using CoreLib.Storage;
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json;
-using System.Text;
-using System.IO.Compression;
+using CoreLib.Utils;
+using MessagePack;
+using System.Net.Http.Headers;
 
 namespace CoreLib.Services.Account
 {
     public interface IAddDeviceService
     {
         Task<bool> AddAsync(string deviceName, string aesKey);
+        Task<AddDeviceQrCore> GetDeviceQrData();
     }
     internal class AddDeviceService(
         IDeviceService deviceService,
@@ -28,86 +28,66 @@ namespace CoreLib.Services.Account
         {
             try
             {
-                if (Convert.FromBase64String(aesKey).Length != 32)
-                    throw new ArgumentException("AES key must be 256-bit (32 bytes)");
+                byte[] aesKeyBytes = Convert.FromBase64String(aesKey);
+                if (aesKeyBytes.Length != 32)
+                    throw new ArgumentException();
 
                 var (device, mLDsaPrK) = await deviceService.CreateAsync(deviceName);
 
                 List<PreKey> preKeys = [];
 
-                var account = await accountStorage.GetAccountAsync() ?? throw new ArgumentNullException();
-                var currentDevice = await deviceStorage.GetCurrentDevice() ?? throw new ArgumentNullException();
+                var account = await accountStorage.GetAccountAsync();
+                var currentDevice = await deviceStorage.GetCurrentDevice();
                 for (int i = 0; i < 50; i++)
                 {
                     var preKey = await preKeyService.CreateAsync(mLDsaPrK, device.Id);
                     preKeys.Add(preKey);
                 }
+
                 var payload = new NewDevicePayload
                 {
                     Name = deviceName,
                     AccountId = account.Id,
-                    Id = device.Id,
-                    SPK = Convert.ToBase64String(device.SPK),
-                    SPrK = Convert.ToBase64String(device.SPrK),
-                    SPKSignature = Convert.ToBase64String(device.SPKSignature),
+                    DeviceId = device.Id,
+                    SPK = device.SPK,
+                    SPrK = device.SPrK,
+                    SPKSignature = device.SPKSignature,
                     PreKeys = [.. preKeys.Select(pk => new NewDevicePreKey
                     {
                         Id = pk.Id,
-                        SPK = Convert.ToBase64String(pk.PK),
-                        SPrK = Convert.ToBase64String(pk.PrK),
-                        Signature = Convert.ToBase64String(pk.Signature)
+                        SPK = pk.PK,
+                        SPrK = pk.PrK,
+                        Signature = pk.Signature
                     })]
                 };
 
-                var settings = new JsonSerializerSettings
-                {
-                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                    Formatting = Formatting.None
-                };
-
-                string rawPayloadJson = JsonConvert.SerializeObject(payload, settings);
-
-                byte[] rawPayloadBytes = Encoding.UTF8.GetBytes(rawPayloadJson);
+                byte[] rawNewDeviceRequest = await CreateDevicePayload(payload, aesKeyBytes);
 
                 var currentSPrK = await mLDsaKey.RecoverPrivateKeyAsync(currentDevice.SPrK);
 
-                byte[] rawNewDeviceIDSignature = await mLDsaKey.SignAsync(Encoding.UTF8.GetBytes(payload.Id), currentSPrK);
+                NewDeviceRequest request = new();
 
-                byte[] aesKeyBytes = Convert.FromBase64String(aesKey);
+                request.Payload = rawNewDeviceRequest;
+                request.TempId = Convert.ToBase64String(await shakeGenerator.ComputeHash256(aesKeyBytes, 64));
+                request.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                request.TrustedSignature = await aesGCMKey.EncryptAsync(await mLDsaKey.SignAsync(rawNewDeviceRequest, currentSPrK), aesKeyBytes);
+                request.PayloadHash = await shakeGenerator.ComputeHash256(rawNewDeviceRequest, 64);
+                request.TrustedDeviceId = currentDevice.Id;
 
-                NewDeviceRequest request = new()
-                {
-                    Payload = Convert.ToBase64String(await aesGCMKey.EncryptAsync(rawPayloadBytes, aesKeyBytes)),
-                    TrustedDeviceId = currentDevice.Id,
-                    TempId = Convert.ToBase64String(await shakeGenerator.ComputeHash256(aesKeyBytes, 64)),
-                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    TrustedSignature = Convert.ToBase64String(await aesGCMKey.EncryptAsync(rawNewDeviceIDSignature, aesKeyBytes)),
-                    PayloadHash = Convert.ToBase64String(await shakeGenerator.ComputeHash256(rawPayloadBytes, 64)),
-                };
-                string rawRequestJson = JsonConvert.SerializeObject(request, settings);
-                byte[] rawRequestBytes = Encoding.UTF8.GetBytes(rawRequestJson);
-                byte[] rawRequestJsonSignature = await mLDsaKey.SignAsync(rawRequestBytes, currentSPrK);
-                byte[] compressedBytes;
-                using (var uncompressedStream = new MemoryStream(rawRequestBytes))
-                using (var compressedStream = new MemoryStream())
-                {
-                    using (var gzipStream = new GZipStream(compressedStream, CompressionLevel.Optimal, leaveOpen: true))
-                    {
-                        await uncompressedStream.CopyToAsync(gzipStream);
-                    }
+                byte[] msgpackBytes = MessagePackSerializer.Serialize(request);
 
-                    compressedBytes = compressedStream.ToArray();
-                }
+                byte[] requestSignature = await mLDsaKey.SignAsync(msgpackBytes, currentSPrK);
+
                 var httpClient = new HttpClient();
-                var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://localhost:7111/api/device/add")
-                {
-                    Content = new ByteArrayContent(compressedBytes)
-                };
-                httpRequest.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-                httpRequest.Content.Headers.ContentEncoding.Add("gzip");
 
-                httpRequest.Headers.Add("X-Signature", Convert.ToBase64String(rawRequestJsonSignature));
-                var response = await httpClient.SendAsync(httpRequest);
+                var httpContent = new ByteArrayContent(msgpackBytes);
+
+                httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-msgpack");
+
+                httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
+
+                var response = await httpClient.PostAsync("https://localhost:7111/api/device/add", httpContent);
+
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -115,6 +95,17 @@ namespace CoreLib.Services.Account
                 return false;
             }
         }
+        public async Task<byte[]> CreateDevicePayload(NewDevicePayload rawPayload, byte[] aesKeyBytes)
+        {
+            byte[] rawBytes = MessagePackSerializer.Serialize(rawPayload);
+
+            byte[] compressed = CompressionUtils.CompressGzip(rawBytes);
+
+            byte[] encryptedPayload = await aesGCMKey.EncryptAsync(compressed, aesKeyBytes);
+
+            return encryptedPayload;
+        }
+
         public async Task<AddDeviceQrCore> GetDeviceQrData()
         {
             var aseKey = await aesGCMKey.GenerateKey();

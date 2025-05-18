@@ -1,10 +1,13 @@
-﻿namespace CoreLib.Models.Dtos.Device.Add
+﻿using MessagePack;
+
+namespace CoreLib.Models.Dtos.Device.Add
 {
+    [MessagePackObject]
     internal class NewDevicePreKey
     {
-        public string Id { get; set; }
-        public string SPK { get; set; }
-        public string SPrK { get; set; }
-        public string Signature { get; set; }
+        [Key(0)] public string Id { get; set; }
+        [Key(1)] public byte[] SPK { get; set; }
+        [Key(2)] public byte[] SPrK { get; set; }
+        [Key(3)] public byte[] Signature { get; set; }
     }
 }

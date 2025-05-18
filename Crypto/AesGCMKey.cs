@@ -32,8 +32,7 @@ namespace CoreLib.Crypto
             return await Task.Run(() =>
             {
                 byte[] nonce = SecureRandom.GetNextBytes(new SecureRandom(), NonceSize);
-                byte[] ciphertext = new byte[plaintext.Length];
-                byte[] tag = new byte[TagSize];
+                byte[] ciphertext = new byte[plaintext.Length + TagSize]; // фикс
 
                 var cipher = new GcmBlockCipher(new Org.BouncyCastle.Crypto.Engines.AesEngine());
                 var parameters = new AeadParameters(new KeyParameter(key), TagSize * 8, nonce);
@@ -49,6 +48,7 @@ namespace CoreLib.Crypto
                 return result;
             });
         }
+
         public async Task<byte[]> DecryptAsync(byte[] encryptedData, byte[] key)
         {
             return await Task.Run(() =>
