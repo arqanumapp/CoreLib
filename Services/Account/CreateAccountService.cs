@@ -127,13 +127,13 @@ namespace CoreLib.Services.Account
                 {
                     Id = device.Id,
                     Name = device.DeviceName,
-                    SPK = Convert.ToBase64String(device.SPK),
-                    Signature = Convert.ToBase64String(device.SPKSignature),
+                    SPK = device.SPK,
+                    Signature = device.SPKSignature,
                     PreKeys = [.. preKeys.Select(x => new RegisterPreKeyRequest
                     {
                         Id = x.Id,
-                        PK = Convert.ToBase64String(x.PK),
-                        PKSignature = Convert.ToBase64String(x.Signature)
+                        PK = x.PK,
+                        PKSignature = x.Signature
                     })]
                 }
             };

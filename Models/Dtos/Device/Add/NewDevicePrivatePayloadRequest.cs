@@ -3,7 +3,7 @@
 namespace CoreLib.Models.Dtos.Device.Add
 {
     [MessagePackObject]
-    internal class NewDevicePayload
+    internal class NewDevicePrivatePayloadRequest
     {
         [Key(0)] public string AccountId { get; set; }
         [Key(1)] public string DeviceId { get; set; }
@@ -11,6 +11,5 @@ namespace CoreLib.Models.Dtos.Device.Add
         [Key(3)] public byte[] SPK { get; set; }
         [Key(4)] public byte[] SPrK { get; set; }
         [Key(5)] public byte[] SPKSignature { get; set; }
-        [Key(6)] public List<NewDevicePreKey> PreKeys { get; set; }
     }
 }

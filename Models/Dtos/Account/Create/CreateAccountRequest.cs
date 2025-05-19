@@ -1,13 +1,16 @@
-﻿namespace CoreLib.Models.Dtos.Account.Create
+﻿using MessagePack;
+
+namespace CoreLib.Models.Dtos.Account.Create
 {
+    [MessagePackObject]
     internal class CreateAccountRequest
     {
-        public string Id { get; set; }
-        public string Username { get; set; }
-        public RegisterDeviceRequest Device { get; set; }
-        public string ProofOfWork { get; set; }
-        public string Nonce { get; set; }
-        public string ChaptchaToken { get; set; }
-        public long Timestamp { get; set; }
+        [Key(0)] public string Id { get; set; }
+        [Key(1)] public string Username { get; set; }
+        [Key(2)] public RegisterDeviceRequest Device { get; set; }
+        [Key(3)] public string ProofOfWork { get; set; }
+        [Key(4)] public string Nonce { get; set; }
+        [Key(5)] public string ChaptchaToken { get; set; }
+        [Key(6)] public long Timestamp { get; set; }
     }
 }

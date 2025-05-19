@@ -1,9 +1,9 @@
 ﻿using MessagePack;
 
-namespace CoreLib.Models.Dtos.Account.Create
+namespace CoreLib.Models.Dtos.Device.Add
 {
     [MessagePackObject]
-    internal class RegisterPreKeyRequest
+    internal class AddNewDevicePreKeysRequest
     {
         [Key(0)] public string Id { get; set; }
         [Key(1)] public byte[] PK { get; set; }

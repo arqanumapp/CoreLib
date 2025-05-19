@@ -17,7 +17,7 @@ namespace CoreLib.Crypto
         {
             return await Task.Run(() =>
             {
-                SecureRandom random = new SecureRandom();
+                SecureRandom random = new();
                 var kemKpg = new MLKemKeyPairGenerator();
                 kemKpg.Init(new MLKemKeyGenerationParameters(random, MLKemParameters.ml_kem_1024));
 
