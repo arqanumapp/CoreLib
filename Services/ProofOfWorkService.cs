@@ -18,7 +18,7 @@ namespace CoreLib.Services
             {
                 rng.GetBytes(buffer);
                 var nonce = BitConverter.ToUInt32(buffer, 0).ToString("X");
-                string hash = Convert.ToBase64String(await shakeGenerator.ComputeHash128(PK + nonce)).ToLowerInvariant();
+                string hash = Convert.ToBase64String(await shakeGenerator.ComputeHash128Async(PK + nonce)).ToLowerInvariant();
 
                 if (hash.StartsWith("000"))
                     return (nonce, hash);

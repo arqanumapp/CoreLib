@@ -17,7 +17,8 @@ namespace CoreLib.Services
                 var (mLKemKeyPK, mLKemKeyPrK) = await mLKemKey.GenerateKeyPairAsync();
                 var preKey = new PreKey
                 {
-                    Id = await shakeGenerator.GetString(await shakeGenerator.ComputeHash256(mLKemKeyPK.GetEncoded(),64)),
+                    Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(mLKemKeyPK.GetEncoded(),64)),
+                    DeviceId = deviceId,
                     PK = mLKemKeyPK.GetEncoded(),
                     PrK = mLKemKeyPrK.GetEncoded(),
                     Signature = await mLDsaKey.SignAsync(mLKemKeyPK.GetEncoded(), dilithiumPrivateKey)

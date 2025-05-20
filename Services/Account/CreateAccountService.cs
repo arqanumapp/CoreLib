@@ -3,17 +3,15 @@ using CoreLib.Helpers;
 using CoreLib.Models.Dtos.Account.Create;
 using CoreLib.Models.Entitys;
 using CoreLib.Storage;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using MessagePack;
 using Org.BouncyCastle.Crypto.Parameters;
-using System.IO.Compression;
-using System.Text;
+using System.Net.Http.Headers;
 
 namespace CoreLib.Services.Account
 {
-    public class CreateAccountService(IDeviceInfoProvider deviceInfoProvider, 
-        IDeviceService deviceService, 
-        IPreKeyService preKeyService, 
+    public class CreateAccountService(IDeviceInfoProvider deviceInfoProvider,
+        IDeviceService deviceService,
+        IPreKeyService preKeyService,
         IMLDsaKey mLDsaKey,
         IProofOfWorkService proofOfWork,
         IAccountStorage accountStorage,
@@ -40,7 +38,7 @@ namespace CoreLib.Services.Account
                 }
 
                 var shakeGen = new ShakeGenerator();
-                account.Id = await shakeGen.GetString(await shakeGen.ComputeHash256(deviceData.SPK, 64));
+                account.Id = await shakeGen.ToBase64StringAsync(await shakeGen.ComputeHash256Async(deviceData.SPK, 64));
                 deviceData.AccountId = account.Id;
                 var request = await CreateRequestDTO(account, deviceData, preKeys);
 
@@ -72,41 +70,21 @@ namespace CoreLib.Services.Account
         }
         private async Task<bool> RegisterAccountAsync(CreateAccountRequest request, MLDsaPrivateKeyParameters mLDsaPrivateKey)
         {
-            var settings = new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                Formatting = Formatting.None
-            };
 
-            string rawJson = JsonConvert.SerializeObject(request, settings);
-            byte[] rawBytes = Encoding.UTF8.GetBytes(rawJson);
+            byte[] msgpackBytes = MessagePackSerializer.Serialize(request);
 
-            byte[] signature = await mLDsaKey.SignAsync(rawBytes, mLDsaPrivateKey);
-
-            byte[] compressedBytes;
-            using (var uncompressedStream = new MemoryStream(rawBytes))
-            using (var compressedStream = new MemoryStream())
-            {
-                using (var gzipStream = new GZipStream(compressedStream, CompressionLevel.Optimal, leaveOpen: true))
-                {
-                    await uncompressedStream.CopyToAsync(gzipStream);
-                }
-
-                compressedBytes = compressedStream.ToArray();
-            }
+            byte[] requestSignature = await mLDsaKey.SignAsync(msgpackBytes, mLDsaPrivateKey);
 
             var httpClient = new HttpClient();
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://localhost:7111/api/account/register")
-            {
-                Content = new ByteArrayContent(compressedBytes)
-            };
 
-            httpRequest.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-            httpRequest.Content.Headers.ContentEncoding.Add("gzip");
+            var httpContent = new ByteArrayContent(msgpackBytes);
 
-            httpRequest.Headers.Add("X-Signature", Convert.ToBase64String(signature));
+            httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-msgpack");
 
-            var response = await httpClient.SendAsync(httpRequest);
+            httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
+
+            var response = await httpClient.PostAsync("https://localhost:7111/api/account/add", httpContent);
+
             return response.IsSuccessStatusCode;
         }
 

@@ -1,5 +1,4 @@
-﻿using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Generators;
+﻿using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
 using Org.BouncyCastle.Security;
@@ -14,24 +13,25 @@ namespace CoreLib.Crypto
         Task<MLDsaPublicKeyParameters> RecoverPublicKeyAsync(byte[] publicKeyBytes);
         Task<MLDsaPrivateKeyParameters> RecoverPrivateKeyAsync(byte[] privateKeyBytes);
     }
+
     internal class MLDsaKey : IMLDsaKey
     {
-        private SecureRandom Random = new SecureRandom();
+        private static readonly SecureRandom Random = new ();
 
-        public async Task<(MLDsaPublicKeyParameters PublicKey, MLDsaPrivateKeyParameters PrivateKey)> GenerateKeyPairAsync()
+        public Task<(MLDsaPublicKeyParameters PublicKey, MLDsaPrivateKeyParameters PrivateKey)> GenerateKeyPairAsync()
         {
-            return await Task.Run(() =>
+            return Task.Run(() =>
             {
                 var keyGen = new MLDsaKeyPairGenerator();
                 keyGen.Init(new MLDsaKeyGenerationParameters(Random, MLDsaParameters.ml_dsa_87));
-                AsymmetricCipherKeyPair keyPair = keyGen.GenerateKeyPair();
+                var keyPair = keyGen.GenerateKeyPair();
                 return ((MLDsaPublicKeyParameters)keyPair.Public, (MLDsaPrivateKeyParameters)keyPair.Private);
             });
         }
 
-        public async Task<byte[]> SignAsync(byte[] data, MLDsaPrivateKeyParameters privateKey)
+        public Task<byte[]> SignAsync(byte[] data, MLDsaPrivateKeyParameters privateKey)
         {
-            return await Task.Run(() =>
+            return Task.Run(() =>
             {
                 var signer = new MLDsaSigner(MLDsaParameters.ml_dsa_87, true);
                 signer.Init(true, privateKey);
@@ -40,11 +40,11 @@ namespace CoreLib.Crypto
             });
         }
 
-        public async Task<bool> VerifyAsync(byte[] publicKeyBytes, byte[] message, byte[] signature)
+        public Task<bool> VerifyAsync(byte[] publicKeyBytes, byte[] message, byte[] signature)
         {
-            return await Task.Run(async () =>
+            return Task.Run(() =>
             {
-                var publicKey = await RecoverPublicKeyAsync(publicKeyBytes);
+                var publicKey = MLDsaPublicKeyParameters.FromEncoding(MLDsaParameters.ml_dsa_87, publicKeyBytes);
                 var verifier = new MLDsaSigner(MLDsaParameters.ml_dsa_87, false);
                 verifier.Init(false, publicKey);
                 verifier.BlockUpdate(message, 0, message.Length);
@@ -53,22 +53,16 @@ namespace CoreLib.Crypto
         }
 
 
-
-        public async Task<MLDsaPublicKeyParameters> RecoverPublicKeyAsync(byte[] publicKeyBytes)
+        public Task<MLDsaPublicKeyParameters> RecoverPublicKeyAsync(byte[] publicKeyBytes)
         {
-            return await Task.Run(() =>
-            {
-                return MLDsaPublicKeyParameters.FromEncoding(MLDsaParameters.ml_dsa_87, publicKeyBytes);
-            });
+            var key = MLDsaPublicKeyParameters.FromEncoding(MLDsaParameters.ml_dsa_87, publicKeyBytes);
+            return Task.FromResult(key);
         }
 
-        public async Task<MLDsaPrivateKeyParameters> RecoverPrivateKeyAsync(byte[] privateKeyBytes)
+        public Task<MLDsaPrivateKeyParameters> RecoverPrivateKeyAsync(byte[] privateKeyBytes)
         {
-            return await Task.Run(() =>
-            {
-                return MLDsaPrivateKeyParameters.FromEncoding(MLDsaParameters.ml_dsa_87, privateKeyBytes);
-            });
+            var key = MLDsaPrivateKeyParameters.FromEncoding(MLDsaParameters.ml_dsa_87, privateKeyBytes);
+            return Task.FromResult(key);
         }
-
     }
 }

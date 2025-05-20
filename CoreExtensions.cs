@@ -9,26 +9,38 @@ namespace CoreLib
 {
     public static class CoreExtensions
     {
-        public static IServiceCollection AddCoreClient(this IServiceCollection services)
+        public static IServiceCollection AddCryptoServices(this IServiceCollection services)
         {
-
-            // Зависимости первого уровня
-            services.AddSingleton<IDeviceService, DeviceService>();
-            services.AddSingleton<IPreKeyService, PreKeyService>();
-
-            services.AddSingleton<IAesGCMKey, AesGCMKey>();
+            services.AddSingleton<IShakeGenerator, ShakeGenerator>();
+            services.AddSingleton<IKeyDerivationService, KeyDerivationService>();
             services.AddSingleton<IMLDsaKey, MLDsaKey>();
             services.AddSingleton<IMLKemKey, MLKemKey>();
-            services.AddSingleton<IShakeGenerator, ShakeGenerator>();
+            services.AddSingleton<IAesGCMKey, AesGCMKey>();
+            return services;
+        }
 
-
+        public static IServiceCollection AddStorageServices(this IServiceCollection services)
+        {
             services.AddSingleton<IAccountStorage, AccountStorage>();
             services.AddSingleton<IDeviceStorage, DeviceStorage>();
             services.AddSingleton<IPreKeyStorage, PreKeyStorage>();
+            return services;
+        }
 
+        public static IServiceCollection AddBusinessServices(this IServiceCollection services)
+        {
+            services.AddSingleton<IDeviceService, DeviceService>();
+            services.AddSingleton<IPreKeyService, PreKeyService>();
             services.AddSingleton<IProofOfWorkService, ProofOfWorkService>();
-
             services.AddSingleton<IAddDeviceService, AddDeviceService>();
+            services.AddSingleton<CreateAccountService>();
+            return services;
+        }
+        public static IServiceCollection AddCoreClient(this IServiceCollection services)
+        {
+            services.AddCryptoServices();
+            services.AddStorageServices();
+            services.AddBusinessServices();
             // Основной сервис
             services.AddSingleton<CreateAccountService>();
 

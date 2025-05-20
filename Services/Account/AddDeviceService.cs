@@ -2,6 +2,7 @@
 using CoreLib.Helpers;
 using CoreLib.Models.Dtos.Device.Add;
 using CoreLib.Models.Entitys;
+using CoreLib.Sockets;
 using CoreLib.Storage;
 using MessagePack;
 using System.Net.Http.Headers;
@@ -11,7 +12,7 @@ namespace CoreLib.Services.Account
     public interface IAddDeviceService
     {
         Task<bool> StartDeviceProvisioningAsync(string deviceName, byte[] aesKeyBytes);
-        Task<AddDeviceQrCore> GetDeviceQrData();
+        Task<(AddDeviceQrCore qr, Task listeningTask)> GetDeviceQrData(Func<bool, Task>? onComplete = null);
     }
     internal class AddDeviceService(
         IDeviceService deviceService,
@@ -21,7 +22,8 @@ namespace CoreLib.Services.Account
         IAccountStorage accountStorage,
         IDeviceStorage deviceStorage,
         IShakeGenerator shakeGenerator,
-        IMLDsaKey mLDsaKey) : IAddDeviceService
+        IMLDsaKey mLDsaKey,
+        IPreKeyStorage preKeyStorage) : IAddDeviceService
     {
         public async Task<bool> StartDeviceProvisioningAsync(string deviceName, byte[] aesKeyBytes)
         {
@@ -63,11 +65,11 @@ namespace CoreLib.Services.Account
 
                 request.PrivatePayload = rawEncryptedPrivatePayload;
                 request.PublicPayload = rawEncryptedPublicPayload;
-                request.TempId = Convert.ToBase64String(await shakeGenerator.ComputeHash256(aesKeyBytes, 64));
+                request.TempId = Convert.ToBase64String(await shakeGenerator.ComputeHash256Async(aesKeyBytes, 64));
                 request.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 request.TrustedSignature = await aesGCMKey.EncryptAsync(await mLDsaKey.SignAsync(rawPublicPayload, currentSPrK), aesKeyBytes);
-                request.PrivatePayloadHash = await shakeGenerator.ComputeHash256(rawEncryptedPrivatePayload, 64);
-                request.PublicPayloadHash = await shakeGenerator.ComputeHash256(rawEncryptedPublicPayload, 64);
+                request.PrivatePayloadHash = await shakeGenerator.ComputeHash256Async(rawEncryptedPrivatePayload, 64);
+                request.PublicPayloadHash = await shakeGenerator.ComputeHash256Async(rawEncryptedPublicPayload, 64);
                 request.TrustedDeviceId = currentDevice.Id;
 
                 byte[] msgpackBytes = MessagePackSerializer.Serialize(request);
@@ -97,8 +99,8 @@ namespace CoreLib.Services.Account
             {
                 var provisioningResponse = MessagePackSerializer.Deserialize<NewDeviceResponce>(responseData);
 
-                var computedPublicHash = await shakeGenerator.ComputeHash256(provisioningResponse.PublicPayload, 64);
-                var computedPrivateHash = await shakeGenerator.ComputeHash256(provisioningResponse.PrivatePayload, 64);
+                var computedPublicHash = await shakeGenerator.ComputeHash256Async(provisioningResponse.PublicPayload, 64);
+                var computedPrivateHash = await shakeGenerator.ComputeHash256Async(provisioningResponse.PrivatePayload, 64);
 
                 if (!computedPublicHash.SequenceEqual(provisioningResponse.PublicPayloadHash) ||
                     !computedPrivateHash.SequenceEqual(provisioningResponse.PrivatePayloadHash))
@@ -147,7 +149,28 @@ namespace CoreLib.Services.Account
 
                 var response = await httpClient.PostAsync("https://localhost:7111/api/device/complete", httpContent);
 
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    await accountStorage.SaveAccountAsync(new Models.Entitys.Account
+                    {
+                        Id = publicPayload.AccountId,
+                        NickName = publicPayload.Name,
+                    });
+
+                    await deviceStorage.SaveDeviceAsync(new Models.Entitys.Device
+                    {
+                        Id = publicPayload.DeviceId,
+                        DeviceName = publicPayload.Name,
+                        SPK = publicPayload.SPK,
+                        SPrK = privatePayload.SPrK,
+                        SPKSignature = publicPayload.SPKSignature,
+                        AccountId = publicPayload.AccountId,
+                        CurrentDevice = true,
+                    });
+
+                    await preKeyStorage.AddRangeAsync(preKeys);
+                }
+                return true;
             }
             catch
             {
@@ -155,15 +178,32 @@ namespace CoreLib.Services.Account
             }
         }
 
-        public async Task<AddDeviceQrCore> GetDeviceQrData()
+        public async Task<(AddDeviceQrCore qr, Task listeningTask)> GetDeviceQrData(Func<bool, Task>? onComplete = null)
         {
-            var aseKey = await aesGCMKey.GenerateKey();
+            var aesKey = await aesGCMKey.GenerateKey();
             var deviceName = await deviceInfoProvider.GetDeviceName();
-            return new AddDeviceQrCore
+
+            string channelId = Convert.ToBase64String(await shakeGenerator.ComputeHash256Async(aesKey, 64));
+            var listener = new DeviceProvisioningListener();
+
+            var listeningTask = Task.Run(async () =>
+            {
+                await listener.StartListeningAsync(channelId, async (responseData) =>
+                {
+                    bool result = await CompleteDeviceProvisioningAsync(responseData, aesKey);
+
+                    if (onComplete is not null)
+                        await onComplete(result);
+                });
+            });
+
+            return (new AddDeviceQrCore
             {
                 Name = deviceName,
-                Key = Convert.ToBase64String(aseKey)
-            };
+                Key = Convert.ToBase64String(aesKey)
+            }, listeningTask);
         }
+
+
     }
 }

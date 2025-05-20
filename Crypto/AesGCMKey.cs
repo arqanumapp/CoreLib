@@ -1,7 +1,6 @@
 ﻿using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
-using System;
 using System.Text;
 
 namespace CoreLib.Crypto
@@ -14,62 +13,60 @@ namespace CoreLib.Crypto
         Task<string> DecryptToString(byte[] encryptedData, byte[] key);
         Task<byte[]> GenerateKey();
     }
+
     internal class AesGCMKey : IAesGCMKey
     {
         private const int NonceSize = 12;
         private const int TagSize = 16;
-        public async Task<byte[]> GenerateKey()
+        private static readonly SecureRandom SecureRng = new();
+
+        public Task<byte[]> GenerateKey()
         {
-            return await Task.Run(() =>
-            {
-                var key = new byte[256 / 8];
-                new SecureRandom().NextBytes(key);
-                return key;
-            });
-        }
-        public async Task<byte[]> EncryptAsync(byte[] plaintext, byte[] key)
-        {
-            return await Task.Run(() =>
-            {
-                byte[] nonce = SecureRandom.GetNextBytes(new SecureRandom(), NonceSize);
-                byte[] ciphertext = new byte[plaintext.Length + TagSize]; // фикс
-
-                var cipher = new GcmBlockCipher(new Org.BouncyCastle.Crypto.Engines.AesEngine());
-                var parameters = new AeadParameters(new KeyParameter(key), TagSize * 8, nonce);
-
-                cipher.Init(true, parameters);
-                int len = cipher.ProcessBytes(plaintext, 0, plaintext.Length, ciphertext, 0);
-                cipher.DoFinal(ciphertext, len);
-
-                byte[] result = new byte[NonceSize + ciphertext.Length];
-                Buffer.BlockCopy(nonce, 0, result, 0, NonceSize);
-                Buffer.BlockCopy(ciphertext, 0, result, NonceSize, ciphertext.Length);
-
-                return result;
-            });
+            var key = new byte[32];
+            SecureRng.NextBytes(key);
+            return Task.FromResult(key);
         }
 
-        public async Task<byte[]> DecryptAsync(byte[] encryptedData, byte[] key)
+        public Task<byte[]> EncryptAsync(byte[] plaintext, byte[] key)
         {
-            return await Task.Run(() =>
-            {
-                byte[] nonce = new byte[NonceSize];
-                byte[] ciphertext = new byte[encryptedData.Length - NonceSize];
+            byte[] nonce = new byte[NonceSize];
+            SecureRng.NextBytes(nonce);
 
-                Buffer.BlockCopy(encryptedData, 0, nonce, 0, NonceSize);
-                Buffer.BlockCopy(encryptedData, NonceSize, ciphertext, 0, ciphertext.Length);
+            byte[] ciphertext = new byte[plaintext.Length + TagSize];
 
-                var cipher = new GcmBlockCipher(new Org.BouncyCastle.Crypto.Engines.AesEngine());
-                var parameters = new AeadParameters(new KeyParameter(key), TagSize * 8, nonce);
+            var cipher = new GcmBlockCipher(new Org.BouncyCastle.Crypto.Engines.AesEngine());
+            var parameters = new AeadParameters(new KeyParameter(key), TagSize * 8, nonce);
 
-                cipher.Init(false, parameters);
-                byte[] plaintext = new byte[ciphertext.Length];
-                int len = cipher.ProcessBytes(ciphertext, 0, ciphertext.Length, plaintext, 0);
-                cipher.DoFinal(plaintext, len);
+            cipher.Init(true, parameters);
+            int len = cipher.ProcessBytes(plaintext, 0, plaintext.Length, ciphertext, 0);
+            cipher.DoFinal(ciphertext, len);
 
-                return plaintext;
-            });
+            byte[] result = new byte[NonceSize + ciphertext.Length];
+            Buffer.BlockCopy(nonce, 0, result, 0, NonceSize);
+            Buffer.BlockCopy(ciphertext, 0, result, NonceSize, ciphertext.Length);
+
+            return Task.FromResult(result);
         }
+
+        public Task<byte[]> DecryptAsync(byte[] encryptedData, byte[] key)
+        {
+            byte[] nonce = new byte[NonceSize];
+            byte[] ciphertext = new byte[encryptedData.Length - NonceSize];
+
+            Buffer.BlockCopy(encryptedData, 0, nonce, 0, NonceSize);
+            Buffer.BlockCopy(encryptedData, NonceSize, ciphertext, 0, ciphertext.Length);
+
+            var cipher = new GcmBlockCipher(new Org.BouncyCastle.Crypto.Engines.AesEngine());
+            var parameters = new AeadParameters(new KeyParameter(key), TagSize * 8, nonce);
+
+            cipher.Init(false, parameters);
+            byte[] plaintext = new byte[ciphertext.Length];
+            int len = cipher.ProcessBytes(ciphertext, 0, ciphertext.Length, plaintext, 0);
+            cipher.DoFinal(plaintext, len);
+
+            return Task.FromResult(plaintext);
+        }
+
         public async Task<byte[]> EncryptString(string message, byte[] key)
         {
             var data = Encoding.UTF8.GetBytes(message);

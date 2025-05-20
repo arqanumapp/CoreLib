@@ -26,7 +26,7 @@ namespace CoreLib.Services
 
                 device.SPKSignature = await mLDsaKey.SignAsync(device.SPK, MlDsaPrK);
 
-                device.Id = await shakeGenerator.GetString(await shakeGenerator.ComputeHash256(device.SPK, 64));
+                device.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(device.SPK, 64));
 
                 return (device, MlDsaPrK);
             }

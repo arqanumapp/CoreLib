@@ -11,36 +11,33 @@ namespace CoreLib.Crypto
         Task<(byte[] kemCipherText, byte[] sharedSecret)> EncapsulateAsync(byte[] receiverPublicKeyBytes);
         Task<byte[]> DecapsulateAsync(byte[] kemCipherText, byte[] privateKey);
     }
+
     internal class MLKemKey : IMLKemKey
     {
-        public async Task<(MLKemPublicKeyParameters publicKey, MLKemPrivateKeyParameters privateKey)> GenerateKeyPairAsync()
+        private static readonly SecureRandom Random = new();
+
+        public Task<(MLKemPublicKeyParameters publicKey, MLKemPrivateKeyParameters privateKey)> GenerateKeyPairAsync()
         {
-            return await Task.Run(() =>
+            return Task.Run(() =>
             {
-                SecureRandom random = new();
                 var kemKpg = new MLKemKeyPairGenerator();
-                kemKpg.Init(new MLKemKeyGenerationParameters(random, MLKemParameters.ml_kem_1024));
-
-                AsymmetricCipherKeyPair kemKp = kemKpg.GenerateKeyPair();
-
-                var kemPublicKey = (MLKemPublicKeyParameters)kemKp.Public;
-                var kemPrivateKey = (MLKemPrivateKeyParameters)kemKp.Private;
+                kemKpg.Init(new MLKemKeyGenerationParameters(Random, MLKemParameters.ml_kem_1024));
+                var kemKp = kemKpg.GenerateKeyPair();
 
                 return ((MLKemPublicKeyParameters)kemKp.Public, (MLKemPrivateKeyParameters)kemKp.Private);
             });
         }
 
-        public async Task<(byte[] kemCipherText, byte[] sharedSecret)> EncapsulateAsync(byte[] receiverPublicKeyBytes)
+        public Task<(byte[] kemCipherText, byte[] sharedSecret)> EncapsulateAsync(byte[] receiverPublicKeyBytes)
         {
-            return await Task.Run(() =>
+            return Task.Run(() =>
             {
-                AsymmetricKeyParameter publicKey = PublicKeyFactory.CreateKey(receiverPublicKeyBytes);
-
+                var publicKey = PublicKeyFactory.CreateKey(receiverPublicKeyBytes);
                 var encapsulator = KemUtilities.GetEncapsulator("ML-KEM-1024");
                 encapsulator.Init(publicKey);
 
-                byte[] kemCipherText = new byte[encapsulator.EncapsulationLength];
-                byte[] sharedSecret = new byte[encapsulator.SecretLength];
+                var kemCipherText = new byte[encapsulator.EncapsulationLength];
+                var sharedSecret = new byte[encapsulator.SecretLength];
 
                 encapsulator.Encapsulate(kemCipherText, 0, kemCipherText.Length, sharedSecret, 0, sharedSecret.Length);
 
@@ -48,16 +45,15 @@ namespace CoreLib.Crypto
             });
         }
 
-        public async Task<byte[]> DecapsulateAsync(byte[] kemCipherText, byte[] privateKey)
+        public Task<byte[]> DecapsulateAsync(byte[] kemCipherText, byte[] privateKey)
         {
-            return await Task.Run(() =>
+            return Task.Run(() =>
             {
+                var privateKeyObj = MLKemPrivateKeyParameters.FromEncoding(MLKemParameters.ml_kem_1024, privateKey);
                 var decapsulator = KemUtilities.GetDecapsulator("ML-KEM-1024");
-                var encryptionPrivateKeyObj = MLKemPrivateKeyParameters.FromEncoding(MLKemParameters.ml_kem_1024, privateKey);
-                decapsulator.Init(encryptionPrivateKeyObj);
+                decapsulator.Init(privateKeyObj);
 
-                byte[] sharedSecret = new byte[decapsulator.SecretLength];
-
+                var sharedSecret = new byte[decapsulator.SecretLength];
                 decapsulator.Decapsulate(kemCipherText, 0, kemCipherText.Length, sharedSecret, 0, sharedSecret.Length);
 
                 return sharedSecret;
