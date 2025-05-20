@@ -49,6 +49,7 @@ namespace CoreLib.Services.Account
                 {
                     Name = deviceName,
                     AccountId = account.Id,
+                    TrustedDeviceId = currentDevice.Id,
                     DeviceId = device.Id,
                     SPK = device.SPK,
                     SPKSignature = device.SPKSignature,
@@ -93,7 +94,7 @@ namespace CoreLib.Services.Account
                 return false;
             }
         }
-        public async Task<bool> CompleteDeviceProvisioningAsync(byte[] responseData, byte[] aesKeyBytes)
+        public async Task<bool> ConfirmDeviceProvisioningAsync(byte[] responseData, byte[] aesKeyBytes)
         {
             try
             {
@@ -122,19 +123,21 @@ namespace CoreLib.Services.Account
                     var preKey = await preKeyService.CreateAsync(deviceSPrK, privatePayload.DeviceId);
                     preKeys.Add(preKey);
                 }
-                var request = new AddNewDeviceRequest();
 
-                request.DevicePayload = publicPayloadBytes;
+                var request = new AddNewDeviceRequest
+                {
+                    DevicePayload = publicPayloadBytes,
 
-                request.PreKeysPayload = [.. preKeys.Select(x => new AddNewDevicePreKeysRequest
-                    {
-                        Id = x.Id,
-                        PK = x.PK,
-                        PKSignature = x.Signature
-                    })];
+                    PreKeysPayload = [.. preKeys.Select(x => new AddNewDevicePreKeysRequest
+                        {
+                            Id = x.Id,
+                            PK = x.PK,
+                            PKSignature = x.Signature
+                        })],
 
-                request.DeviceTrustedSignature = trustedSignatureBytes;
-
+                    DeviceTrustedSignature = trustedSignatureBytes
+                };
+                request.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 byte[] msgpackBytes = MessagePackSerializer.Serialize(request);
 
                 byte[] requestSignature = await mLDsaKey.SignAsync(msgpackBytes, deviceSPrK);
@@ -147,7 +150,7 @@ namespace CoreLib.Services.Account
 
                 httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
 
-                var response = await httpClient.PostAsync("https://localhost:7111/api/device/complete", httpContent);
+                var response = await httpClient.PostAsync("https://localhost:7111/api/device/confirm", httpContent);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -190,7 +193,7 @@ namespace CoreLib.Services.Account
             {
                 await listener.StartListeningAsync(channelId, async (responseData) =>
                 {
-                    bool result = await CompleteDeviceProvisioningAsync(responseData, aesKey);
+                    bool result = await ConfirmDeviceProvisioningAsync(responseData, aesKey);
 
                     if (onComplete is not null)
                         await onComplete(result);

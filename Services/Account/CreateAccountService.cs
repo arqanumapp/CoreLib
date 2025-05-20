@@ -83,7 +83,7 @@ namespace CoreLib.Services.Account
 
             httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
 
-            var response = await httpClient.PostAsync("https://localhost:7111/api/account/add", httpContent);
+            var response = await httpClient.PostAsync("https://localhost:7111/api/account/register", httpContent);
 
             return response.IsSuccessStatusCode;
         }
