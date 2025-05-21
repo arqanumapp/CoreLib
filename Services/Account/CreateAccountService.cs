@@ -3,20 +3,18 @@ using CoreLib.Helpers;
 using CoreLib.Models.Dtos.Account.Create;
 using CoreLib.Models.Entitys;
 using CoreLib.Storage;
-using MessagePack;
-using Org.BouncyCastle.Crypto.Parameters;
-using System.Net.Http.Headers;
 
 namespace CoreLib.Services.Account
 {
     public class CreateAccountService(IDeviceInfoProvider deviceInfoProvider,
         IDeviceService deviceService,
         IPreKeyService preKeyService,
-        IMLDsaKey mLDsaKey,
         IProofOfWorkService proofOfWork,
         IAccountStorage accountStorage,
         IDeviceStorage deviceStorage,
-        IPreKeyStorage preKeyStorage)
+        IPreKeyStorage preKeyStorage,
+        IShakeGenerator shakeGenerator,
+        IApiService apiService)
     {
         public async Task<bool> CreateAsync(string nickName)
         {
@@ -37,14 +35,13 @@ namespace CoreLib.Services.Account
                     preKeys.Add(preKey);
                 }
 
-                var shakeGen = new ShakeGenerator();
-                account.Id = await shakeGen.ToBase64StringAsync(await shakeGen.ComputeHash256Async(deviceData.SPK, 64));
+                account.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(deviceData.SPK, 64));
                 deviceData.AccountId = account.Id;
-                var request = await CreateRequestDTO(account, deviceData, preKeys);
+                var payload = await CreateRequestDTO(account, deviceData, preKeys);
 
-                var requestResult = await RegisterAccountAsync(request, mLDsaPrK);
+                var responce = await apiService.PostAsync(payload, mLDsaPrK, "account/register");
 
-                if (requestResult)
+                if (responce.IsSuccessStatusCode)
                 {
                     if (!await accountStorage.SaveAccountAsync(account))
                     {
@@ -68,27 +65,6 @@ namespace CoreLib.Services.Account
                 throw new Exception("Error creating account", ex);
             }
         }
-        private async Task<bool> RegisterAccountAsync(CreateAccountRequest request, MLDsaPrivateKeyParameters mLDsaPrivateKey)
-        {
-
-            byte[] msgpackBytes = MessagePackSerializer.Serialize(request);
-
-            byte[] requestSignature = await mLDsaKey.SignAsync(msgpackBytes, mLDsaPrivateKey);
-
-            var httpClient = new HttpClient();
-
-            var httpContent = new ByteArrayContent(msgpackBytes);
-
-            httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-msgpack");
-
-            httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
-
-            var response = await httpClient.PostAsync("https://localhost:7111/api/account/register", httpContent);
-
-            return response.IsSuccessStatusCode;
-        }
-
-
 
         private async Task<CreateAccountRequest> CreateRequestDTO(CoreLib.Models.Entitys.Account account, Device device, List<PreKey> preKeys)
         {

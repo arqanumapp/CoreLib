@@ -13,7 +13,7 @@ namespace CoreLib.Services.Account
     {
         Task<FindContactResponce> FindAccountById(string accountId);
     }
-    internal class ContactService(IDeviceStorage deviceStorage, IMLDsaKey mLDsaKey) : IContactService
+    internal class ContactService(IDeviceStorage deviceStorage, IMLDsaKey mLDsaKey , IApiService apiService) : IContactService
     {
         public async Task<FindContactResponce> FindAccountById(string accountId)
         {
@@ -25,21 +25,9 @@ namespace CoreLib.Services.Account
                 AccountId = accountId,
             };
 
-            byte[] msgpackBytes = MessagePackSerializer.Serialize(lookupUserRequest);
-
             MLDsaPrivateKeyParameters currentSPrK = await mLDsaKey.RecoverPrivateKeyAsync(currentDevice.SPrK);
 
-            byte[] requestSignature = await mLDsaKey.SignAsync(msgpackBytes, currentSPrK);
-
-            var httpClient = new HttpClient();
-
-            var httpContent = new ByteArrayContent(msgpackBytes);
-
-            httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-msgpack");
-
-            httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
-
-            var response = await httpClient.PostAsync("https://localhost:7111/api/contact/lookup", httpContent);
+            var response = await apiService.PostAsync(lookupUserRequest, currentSPrK, "contact/lookup");
 
             if (response.IsSuccessStatusCode)
             {

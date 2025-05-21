@@ -1,15 +1,23 @@
-﻿using CoreLib.Crypto;
+﻿using CoreLib.Configurations;
+using CoreLib.Crypto;
 using CoreLib.Helpers;
 using CoreLib.Services;
 using CoreLib.Services.Account;
 using CoreLib.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CoreLib
 {
     public static class CoreExtensions
     {
-        public static IServiceCollection AddCryptoServices(this IServiceCollection services)
+        private static IServiceCollection AddConfigurations(this IServiceCollection services)
+        {
+            services.AddSingleton(new ApiConfiguration());
+            return services;
+        }
+
+        private static IServiceCollection AddCryptoServices(this IServiceCollection services)
         {
             services.AddSingleton<IShakeGenerator, ShakeGenerator>();
             services.AddSingleton<IKeyDerivationService, KeyDerivationService>();
@@ -19,7 +27,7 @@ namespace CoreLib
             return services;
         }
 
-        public static IServiceCollection AddStorageServices(this IServiceCollection services)
+        private static IServiceCollection AddStorageServices(this IServiceCollection services)
         {
             services.AddSingleton<IAccountStorage, AccountStorage>();
             services.AddSingleton<IDeviceStorage, DeviceStorage>();
@@ -27,7 +35,7 @@ namespace CoreLib
             return services;
         }
 
-        public static IServiceCollection AddBusinessServices(this IServiceCollection services)
+        private static IServiceCollection AddBusinessServices(this IServiceCollection services)
         {
             services.AddTransient<IDeviceService, DeviceService>();
             services.AddTransient<IContactService, ContactService>();
@@ -40,18 +48,18 @@ namespace CoreLib
             services.AddSingleton<CreateAccountService>();
             return services;
         }
-        public static IServiceCollection AddCoreClient(this IServiceCollection services)
+        public static IServiceCollection AddArqanumCore(this IServiceCollection services)
         {
+            services.AddHttpClient<IApiService, ApiService>();
+            services.AddConfigurations();
             services.AddCryptoServices();
             services.AddStorageServices();
             services.AddBusinessServices();
-            // Основной сервис
-            services.AddSingleton<CreateAccountService>();
 
             var provider = services.BuildServiceProvider();
             var devInfoProvider = provider.GetService<IDeviceInfoProvider>();
             if (devInfoProvider == null)
-                throw new InvalidOperationException("You must register an implementation of IDeviceInfoProvider before calling AddEnigramClient().");
+                throw new InvalidOperationException("You must register an implementation of IDeviceInfoProvider before calling AddArqanumCore().");
 
             return services;
         }

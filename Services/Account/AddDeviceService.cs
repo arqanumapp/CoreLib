@@ -5,7 +5,6 @@ using CoreLib.Models.Entitys;
 using CoreLib.Sockets;
 using CoreLib.Storage;
 using MessagePack;
-using System.Net.Http.Headers;
 
 namespace CoreLib.Services.Account
 {
@@ -23,7 +22,8 @@ namespace CoreLib.Services.Account
         IDeviceStorage deviceStorage,
         IShakeGenerator shakeGenerator,
         IMLDsaKey mLDsaKey,
-        IPreKeyStorage preKeyStorage) : IAddDeviceService
+        IPreKeyStorage preKeyStorage,
+        IApiService apiService) : IAddDeviceService
     {
         public async Task<bool> StartDeviceProvisioningAsync(string deviceName, byte[] aesKeyBytes)
         {
@@ -73,19 +73,7 @@ namespace CoreLib.Services.Account
                 request.PublicPayloadHash = await shakeGenerator.ComputeHash256Async(rawEncryptedPublicPayload, 64);
                 request.TrustedDeviceId = currentDevice.Id;
 
-                byte[] msgpackBytes = MessagePackSerializer.Serialize(request);
-
-                byte[] requestSignature = await mLDsaKey.SignAsync(msgpackBytes, currentSPrK);
-
-                var httpClient = new HttpClient();
-
-                var httpContent = new ByteArrayContent(msgpackBytes);
-
-                httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-msgpack");
-
-                httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
-
-                var response = await httpClient.PostAsync("https://localhost:7111/api/device/add", httpContent);
+                var response = await apiService.PostAsync(request, currentSPrK, "device/add");
 
                 return response.IsSuccessStatusCode;
             }
@@ -138,19 +126,7 @@ namespace CoreLib.Services.Account
                     DeviceTrustedSignature = trustedSignatureBytes
                 };
                 request.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                byte[] msgpackBytes = MessagePackSerializer.Serialize(request);
-
-                byte[] requestSignature = await mLDsaKey.SignAsync(msgpackBytes, deviceSPrK);
-
-                var httpClient = new HttpClient();
-
-                var httpContent = new ByteArrayContent(msgpackBytes);
-
-                httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-msgpack");
-
-                httpContent.Headers.Add("X-Signature", Convert.ToBase64String(requestSignature));
-
-                var response = await httpClient.PostAsync("https://localhost:7111/api/device/confirm", httpContent);
+                var response = await apiService.PostAsync(request, deviceSPrK, "device/confirm");
 
                 if (response.IsSuccessStatusCode)
                 {
