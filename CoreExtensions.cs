@@ -29,10 +29,14 @@ namespace CoreLib
 
         public static IServiceCollection AddBusinessServices(this IServiceCollection services)
         {
-            services.AddSingleton<IDeviceService, DeviceService>();
+            services.AddTransient<IDeviceService, DeviceService>();
+            services.AddTransient<IContactService, ContactService>();
+
             services.AddSingleton<IPreKeyService, PreKeyService>();
-            services.AddSingleton<IProofOfWorkService, ProofOfWorkService>();
-            services.AddSingleton<IAddDeviceService, AddDeviceService>();
+
+            services.AddTransient<IProofOfWorkService, ProofOfWorkService>();
+            services.AddTransient<IAddDeviceService, AddDeviceService>();
+
             services.AddSingleton<CreateAccountService>();
             return services;
         }
