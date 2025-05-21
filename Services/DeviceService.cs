@@ -1,16 +1,16 @@
 ﻿using CoreLib.Crypto;
-using CoreLib.Models.Entitys;
+using CoreLib.Models.Entitys.Devices;
 using Org.BouncyCastle.Crypto.Parameters;
 
 namespace CoreLib.Services
 {
     public interface IDeviceService
     {
-        Task<(Device, MLDsaPrivateKeyParameters)> CreateAsync(string deviceName);
+        Task<(Device device, byte[] SPKSignature, MLDsaPrivateKeyParameters mlDsaPrK)> CreateAsync(string deviceName);
     }
     internal class DeviceService(IMLDsaKey mLDsaKey, IShakeGenerator shakeGenerator) : IDeviceService
     {
-        public async Task<(Device, MLDsaPrivateKeyParameters)> CreateAsync(string deviceName)
+        public async Task<(Device device, byte[] SPKSignature, MLDsaPrivateKeyParameters mlDsaPrK)> CreateAsync(string deviceName)
         {
             try
             {
@@ -19,16 +19,18 @@ namespace CoreLib.Services
                 Device device = new()
                 {
                     DeviceName = deviceName,
-                    SPK = mLDsaPK.GetEncoded(),
-                    SPrK = MlDsaPrK.GetEncoded(),
-                    CurrentDevice = true,
+                    DeviceKeys = new DeviceKeys
+                    {
+                        SPK = mLDsaPK.GetEncoded(),
+                        SPrK = MlDsaPrK.GetEncoded(),
+                    },
                 };
 
-                device.SPKSignature = await mLDsaKey.SignAsync(device.SPK, MlDsaPrK);
+                byte [] SPKSignature = await mLDsaKey.SignAsync(device.DeviceKeys.SPK, MlDsaPrK);
 
-                device.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(device.SPK, 64));
+                device.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(device.DeviceKeys.SPK, 64));
 
-                return (device, MlDsaPrK);
+                return (device, SPKSignature, MlDsaPrK);
             }
             catch (Exception ex)
             {

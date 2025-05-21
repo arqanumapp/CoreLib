@@ -1,21 +1,20 @@
 ﻿using CoreLib.Crypto;
 using CoreLib.Models.Dtos.Contact.Lookup;
-using CoreLib.Models.Entitys;
+using CoreLib.Models.Entitys.Devices;
 using CoreLib.Models.ViewModels.Contact.Lookup;
 using CoreLib.Storage;
 using MessagePack;
 using Org.BouncyCastle.Crypto.Parameters;
-using System.Net.Http.Headers;
 
 namespace CoreLib.Services.Account
 {
     public interface IContactService
     {
-        Task<FindContactResponce> FindAccountById(string accountId);
+        Task<FindContactResponce> FindAccountByIdAsync(string accountId);
     }
-    internal class ContactService(IDeviceStorage deviceStorage, IMLDsaKey mLDsaKey , IApiService apiService) : IContactService
+    internal class ContactService(IDeviceStorage deviceStorage, IMLDsaKey mLDsaKey, IApiService apiService) : IContactService
     {
-        public async Task<FindContactResponce> FindAccountById(string accountId)
+        public async Task<FindContactResponce> FindAccountByIdAsync(string accountId)
         {
             Device currentDevice = await deviceStorage.GetCurrentDevice() ?? throw new Exception("Device not found");
 
@@ -25,7 +24,7 @@ namespace CoreLib.Services.Account
                 AccountId = accountId,
             };
 
-            MLDsaPrivateKeyParameters currentSPrK = await mLDsaKey.RecoverPrivateKeyAsync(currentDevice.SPrK);
+            MLDsaPrivateKeyParameters currentSPrK = await mLDsaKey.RecoverPrivateKeyAsync(currentDevice.DeviceKeys.SPK);
 
             var response = await apiService.PostAsync(lookupUserRequest, currentSPrK, "contact/lookup");
 
@@ -41,6 +40,11 @@ namespace CoreLib.Services.Account
                 return contactResponce;
             }
             else return null;
+        }
+
+        public async Task SendHandshakeAsync(string accountId)
+        {
+            
         }
     }
 }

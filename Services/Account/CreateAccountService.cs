@@ -2,6 +2,7 @@
 using CoreLib.Helpers;
 using CoreLib.Models.Dtos.Account.Create;
 using CoreLib.Models.Entitys;
+using CoreLib.Models.Entitys.Devices;
 using CoreLib.Storage;
 
 namespace CoreLib.Services.Account
@@ -25,7 +26,7 @@ namespace CoreLib.Services.Account
                     NickName = nickName
                 };
 
-                var (deviceData, mLDsaPrK) = await deviceService.CreateAsync(await deviceInfoProvider.GetDeviceName());
+                var (deviceData,SPrKSignatire ,mLDsaPrK) = await deviceService.CreateAsync(await deviceInfoProvider.GetDeviceName());
 
                 List<PreKey> preKeys = [];
 
@@ -35,9 +36,9 @@ namespace CoreLib.Services.Account
                     preKeys.Add(preKey);
                 }
 
-                account.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(deviceData.SPK, 64));
+                account.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(deviceData.DeviceKeys.SPK, 64));
                 deviceData.AccountId = account.Id;
-                var payload = await CreateRequestDTO(account, deviceData, preKeys);
+                var payload = await CreateRequestDTO(account, deviceData, preKeys, SPrKSignatire);
 
                 var responce = await apiService.PostAsync(payload, mLDsaPrK, "account/register");
 
@@ -66,9 +67,9 @@ namespace CoreLib.Services.Account
             }
         }
 
-        private async Task<CreateAccountRequest> CreateRequestDTO(CoreLib.Models.Entitys.Account account, Device device, List<PreKey> preKeys)
+        private async Task<CreateAccountRequest> CreateRequestDTO(CoreLib.Models.Entitys.Account account, Device device, List<PreKey> preKeys, byte[] sPrKSignatire)
         {
-            var (nonce, proof) = await proofOfWork.FindProofOfWork(Convert.ToBase64String(device.SPK));
+            var (nonce, proof) = await proofOfWork.FindProofOfWork(Convert.ToBase64String(device.DeviceKeys.SPK));
             CreateAccountRequest accountRequest = new()
             {
                 Id = account.Id,
@@ -81,8 +82,8 @@ namespace CoreLib.Services.Account
                 {
                     Id = device.Id,
                     Name = device.DeviceName,
-                    SPK = device.SPK,
-                    Signature = device.SPKSignature,
+                    SPK = device.DeviceKeys.SPK,
+                    Signature = sPrKSignatire,
                     PreKeys = [.. preKeys.Select(x => new RegisterPreKeyRequest
                     {
                         Id = x.Id,

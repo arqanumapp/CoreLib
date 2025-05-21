@@ -2,6 +2,7 @@
 using CoreLib.Helpers;
 using CoreLib.Models.Dtos.Device.Add;
 using CoreLib.Models.Entitys;
+using CoreLib.Models.Entitys.Devices;
 using CoreLib.Sockets;
 using CoreLib.Storage;
 using MessagePack;
@@ -29,20 +30,17 @@ namespace CoreLib.Services.Account
         {
             try
             {
-                var (device, mLDsaPrK) = await deviceService.CreateAsync(deviceName);
+                var (device, SPrKSignatire, mLDsaPrK) = await deviceService.CreateAsync(deviceName);
 
-                var account = await accountStorage.GetAccountAsync();
-                var currentDevice = await deviceStorage.GetCurrentDevice();
-
-
+                var account = await accountStorage.GetAccountAsync() ?? throw new ArgumentNullException("Account not found");
+                var currentDevice = await deviceStorage.GetCurrentDevice() ?? throw new ArgumentNullException("Current device not found");
                 var privatePayload = new NewDevicePrivatePayloadRequest
                 {
                     Name = deviceName,
                     AccountId = account.Id,
                     DeviceId = device.Id,
-                    SPK = device.SPK,
-                    SPrK = device.SPrK,
-                    SPKSignature = device.SPKSignature,
+                    SPK = device.DeviceKeys.SPK,
+                    SPrK = device.DeviceKeys.SPrK,
                 };
 
                 var publicPayload = new NewDevicePublicPayloadRequest
@@ -51,8 +49,8 @@ namespace CoreLib.Services.Account
                     AccountId = account.Id,
                     TrustedDeviceId = currentDevice.Id,
                     DeviceId = device.Id,
-                    SPK = device.SPK,
-                    SPKSignature = device.SPKSignature,
+                    SPK = device.DeviceKeys.SPK,
+                    SPKSignature = SPrKSignatire,
                 };
 
                 byte[] rawEncryptedPrivatePayload = await aesGCMKey.EncryptAsync(MessagePackSerializer.Serialize(privatePayload), aesKeyBytes);
@@ -60,7 +58,7 @@ namespace CoreLib.Services.Account
                 byte[] rawPublicPayload = MessagePackSerializer.Serialize(publicPayload);
                 byte[] rawEncryptedPublicPayload = await aesGCMKey.EncryptAsync(rawPublicPayload, aesKeyBytes);
 
-                var currentSPrK = await mLDsaKey.RecoverPrivateKeyAsync(currentDevice.SPrK);
+                var currentSPrK = await mLDsaKey.RecoverPrivateKeyAsync(currentDevice.DeviceKeys.SPrK);
 
                 NewDeviceRequest request = new();
 
@@ -136,15 +134,16 @@ namespace CoreLib.Services.Account
                         NickName = publicPayload.Name,
                     });
 
-                    await deviceStorage.SaveDeviceAsync(new Models.Entitys.Device
+                    await deviceStorage.SaveDeviceAsync(new Device
                     {
                         Id = publicPayload.DeviceId,
                         DeviceName = publicPayload.Name,
-                        SPK = publicPayload.SPK,
-                        SPrK = privatePayload.SPrK,
-                        SPKSignature = publicPayload.SPKSignature,
+                        DeviceKeys = new DeviceKeys
+                        {
+                            SPK = publicPayload.SPK,
+                            SPrK = privatePayload.SPrK,
+                        },
                         AccountId = publicPayload.AccountId,
-                        CurrentDevice = true,
                     });
 
                     await preKeyStorage.AddRangeAsync(preKeys);
@@ -165,16 +164,24 @@ namespace CoreLib.Services.Account
             string channelId = Convert.ToBase64String(await shakeGenerator.ComputeHash256Async(aesKey, 64));
             var listener = new DeviceProvisioningListener();
 
+            var isStopped = false;
+
             var listeningTask = Task.Run(async () =>
             {
                 await listener.StartListeningAsync(channelId, async (responseData) =>
                 {
+                    if (isStopped)
+                        return;
+
                     bool result = await ConfirmDeviceProvisioningAsync(responseData, aesKey);
 
-                    if (onComplete is not null)
+                    if (onComplete != null)
                         await onComplete(result);
+
+                    isStopped = true;
+                    await listener.StopAsync();
                 });
-            });
+            }); 
 
             return (new AddDeviceQrCore
             {

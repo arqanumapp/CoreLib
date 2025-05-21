@@ -3,6 +3,7 @@ using CoreLib.Crypto;
 using CoreLib.Helpers;
 using CoreLib.Services;
 using CoreLib.Services.Account;
+using CoreLib.Sockets;
 using CoreLib.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +52,7 @@ namespace CoreLib
         public static IServiceCollection AddArqanumCore(this IServiceCollection services)
         {
             services.AddHttpClient<IApiService, ApiService>();
+            services.AddSingleton<NotificationsListener>();
             services.AddConfigurations();
             services.AddCryptoServices();
             services.AddStorageServices();
