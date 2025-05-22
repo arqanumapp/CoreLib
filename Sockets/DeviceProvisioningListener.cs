@@ -13,7 +13,7 @@ namespace CoreLib.Sockets
             try
             {
                 _connection = new HubConnectionBuilder()
-                    .WithUrl("https://localhost:7111/devicehub")
+                    .WithUrl("https://localhost:7111/devicehub") 
                     .WithAutomaticReconnect()
                     .Build();
 
