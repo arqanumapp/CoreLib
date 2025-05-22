@@ -1,4 +1,5 @@
-﻿using CoreLib.Models.Entitys.Devices;
+﻿using CoreLib.Helpers;
+using CoreLib.Models.Entitys.Devices;
 
 namespace CoreLib.Storage
 {
@@ -10,7 +11,7 @@ namespace CoreLib.Storage
 
         Task<List<Device>> GetDevicesList();
     }
-    internal class DeviceStorage : BaseStorage<Device>, IDeviceStorage
+    internal class DeviceStorage(IDatabasePasswordProvider passwordProvider) : BaseStorage<Device>(passwordProvider), IDeviceStorage
     {
         public async Task<bool> AddConnectedDevie(Device device)
         {

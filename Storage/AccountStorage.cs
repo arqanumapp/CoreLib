@@ -1,4 +1,5 @@
-﻿using CoreLib.Models.Entitys;
+﻿using CoreLib.Helpers;
+using CoreLib.Models.Entitys;
 
 namespace CoreLib.Storage
 {
@@ -7,7 +8,7 @@ namespace CoreLib.Storage
         Task<bool> SaveAccountAsync(Account account);
         Task<Account?> GetAccountAsync();
     }
-    internal class AccountStorage : BaseStorage<Account>, IAccountStorage
+    internal class AccountStorage(IDatabasePasswordProvider passwordProvider) : BaseStorage<Account>(passwordProvider), IAccountStorage
     {
         public async Task<bool> SaveAccountAsync(Account account)
         {

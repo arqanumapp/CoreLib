@@ -34,6 +34,7 @@ namespace CoreLib
             services.AddSingleton<IAccountStorage, AccountStorage>();
             services.AddSingleton<IDeviceStorage, DeviceStorage>();
             services.AddSingleton<IPreKeyStorage, PreKeyStorage>();
+
             return services;
         }
         private static IServiceCollection AddNotificatioServices(this IServiceCollection services)
@@ -69,6 +70,9 @@ namespace CoreLib
             services.AddBusinessServices();
             services.AddNotificatioServices();
             var provider = services.BuildServiceProvider();
+
+            _ = provider.GetService<IDatabasePasswordProvider>()
+               ?? throw new InvalidOperationException("You must register an implementation of IDatabasePasswordProvider before calling AddArqanumCore().");
 
             _ = provider.GetService<IDeviceInfoProvider>()
                 ?? throw new InvalidOperationException("You must register an implementation of IDeviceInfoProvider before calling AddArqanumCore().");

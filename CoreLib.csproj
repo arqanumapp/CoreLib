@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+    <PackageReference Include="SQLitePCLRaw.bundle_sqlcipher" Version="1.1.14" />
   </ItemGroup>
 
   <ItemGroup>

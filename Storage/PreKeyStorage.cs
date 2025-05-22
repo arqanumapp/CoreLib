@@ -1,4 +1,5 @@
-﻿using CoreLib.Models.Entitys;
+﻿using CoreLib.Helpers;
+using CoreLib.Models.Entitys;
 
 namespace CoreLib.Storage
 {
@@ -8,7 +9,7 @@ namespace CoreLib.Storage
         Task<PreKey?> GetPreKeyAsync(string id);
         Task<bool> AddRangeAsync(List<PreKey> preKeys);
     }
-    internal class PreKeyStorage : BaseStorage<PreKey>, IPreKeyStorage
+    internal class PreKeyStorage(IDatabasePasswordProvider passwordProvider) : BaseStorage<PreKey>(passwordProvider), IPreKeyStorage
     {
         public async Task<bool> SavePreKeyAsync(PreKey preKey)
         {
