@@ -8,7 +8,7 @@ namespace CoreLib.Storage
         protected BaseStorage()
         {
             string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string databasePath = Path.Combine(folderPath, "AppStorage3.db");
+            string databasePath = Path.Combine(folderPath, "AppStorage4.db");
             _database = new SQLiteAsyncConnection(databasePath);
             _database.CreateTableAsync<T>().Wait();
         }

@@ -30,9 +30,8 @@ namespace CoreLib.Sockets
                 await _connection.InvokeAsync("SubscribeToProvisioningChannel", channelId);
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Ошибка подключения к SignalR: {ex.Message}");
                 return false;
             }
         }

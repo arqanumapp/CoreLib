@@ -7,7 +7,8 @@ using CoreLib.Storage;
 
 namespace CoreLib.Services.Account
 {
-    public class CreateAccountService(IDeviceInfoProvider deviceInfoProvider,
+    public class CreateAccountService(
+        IDeviceInfoProvider deviceInfoProvider,
         IDeviceService deviceService,
         IPreKeyService preKeyService,
         IProofOfWorkService proofOfWork,
@@ -26,7 +27,7 @@ namespace CoreLib.Services.Account
                     NickName = nickName
                 };
 
-                var (deviceData,SPrKSignatire ,mLDsaPrK) = await deviceService.CreateAsync(await deviceInfoProvider.GetDeviceName());
+                var (deviceData, SPrKSignatire, mLDsaPrK) = await deviceService.CreateAsync(await deviceInfoProvider.GetDeviceName());
 
                 List<PreKey> preKeys = [];
 

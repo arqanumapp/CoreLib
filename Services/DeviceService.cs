@@ -8,7 +8,7 @@ namespace CoreLib.Services
     {
         Task<(Device device, byte[] SPKSignature, MLDsaPrivateKeyParameters mlDsaPrK)> CreateAsync(string deviceName);
     }
-    internal class DeviceService(IMLDsaKey mLDsaKey, IShakeGenerator shakeGenerator) : IDeviceService
+    internal class DeviceService(IMLDsaKey mLDsaKey, IShakeGenerator shakeGenerator, INotificationService notificationService) : IDeviceService
     {
         public async Task<(Device device, byte[] SPKSignature, MLDsaPrivateKeyParameters mlDsaPrK)> CreateAsync(string deviceName)
         {

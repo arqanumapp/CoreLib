@@ -12,6 +12,24 @@ namespace CoreLib.Storage
     }
     internal class DeviceStorage : BaseStorage<Device>, IDeviceStorage
     {
+        public async Task<bool> AddConnectedDevie(Device device)
+        {
+            try
+            {
+                var result = await _database.InsertOrReplaceAsync(device);
+                if (device.DeviceKeys != null)
+                {
+                    device.DeviceKeys.DeviceId = device.Id;
+                    await _database.InsertOrReplaceAsync(device.DeviceKeys);
+                }
+
+                return result > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         public async Task<bool> SaveDeviceAsync(Device device)
         {
             try
@@ -26,7 +44,7 @@ namespace CoreLib.Storage
 
                 return result > 0;
             }
-            catch (Exception ex)
+            catch
             {
                 return false;
             }
@@ -45,7 +63,7 @@ namespace CoreLib.Storage
 
                 return device;
             }
-            catch (Exception ex)
+            catch
             {
                 return null;
             }
@@ -58,7 +76,7 @@ namespace CoreLib.Storage
                 var devices = await _database.Table<Device>().ToListAsync();
                 return devices;
             }
-            catch (Exception ex)
+            catch
             {
                 return null;
             }
@@ -71,7 +89,7 @@ namespace CoreLib.Storage
                 var device = await _database.Table<Device>().FirstOrDefaultAsync(x => x.Id == id);
                 return device;
             }
-            catch (Exception ex)
+            catch
             {
                 return null;
             }
