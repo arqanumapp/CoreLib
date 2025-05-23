@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace CoreLib.Services
 {
+
     internal interface INotificationService
     {
         bool IsConnected { get; }
@@ -14,7 +15,6 @@ namespace CoreLib.Services
         Task<bool> ConnectAsync(string deviceId, byte[] signature);
         Task DisconnectAsync();
     }
-
     internal class NotificationService(ApiConfiguration apiConfiguration, IMediator mediator) : INotificationService
     {
         private HubConnection? _connection;

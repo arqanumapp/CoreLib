@@ -1,5 +1,5 @@
 ﻿using CoreLib.Crypto;
-using CoreLib.Helpers;
+using CoreLib.Interfaces;
 using CoreLib.Models.Dtos.Account.Create;
 using CoreLib.Models.Entitys;
 using CoreLib.Storage;
@@ -15,7 +15,8 @@ namespace CoreLib.Services.Account
         IDeviceStorage deviceStorage,
         IPreKeyStorage preKeyStorage,
         IShakeGenerator shakeGenerator,
-        IApiService apiService)
+        IApiService apiService,
+        ICaptchaTokenProvider captchaTokenProvider)
     {
         public async Task<bool> CreateAsync(string nickName, IProgress<string>? progress = null)
         {
@@ -83,7 +84,7 @@ namespace CoreLib.Services.Account
                 ProofOfWork = proof,
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Nonce = nonce,
-                ChaptchaToken = "ChaptchaToken",
+                ChaptchaToken = await captchaTokenProvider.GetCaptchaTokenAsync() ?? throw new ArgumentNullException("hCaptcha token missing."),
                 Device = new RegisterDeviceRequest
                 {
                     Id = device.Id,

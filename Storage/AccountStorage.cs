@@ -1,4 +1,4 @@
-﻿using CoreLib.Helpers;
+﻿using CoreLib.Interfaces;
 using CoreLib.Models.Entitys;
 
 namespace CoreLib.Storage

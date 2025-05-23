@@ -1,4 +1,4 @@
-﻿namespace CoreLib.Notifications
+﻿namespace CoreLib.Interfaces
 {
     public interface INotificationDisplayService
     {

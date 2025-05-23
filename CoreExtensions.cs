@@ -1,6 +1,6 @@
 ﻿using CoreLib.Configurations;
 using CoreLib.Crypto;
-using CoreLib.Helpers;
+using CoreLib.Interfaces;
 using CoreLib.Notifications;
 using CoreLib.Notifications.Handlers;
 using CoreLib.Services;
@@ -73,6 +73,9 @@ namespace CoreLib
 
             _ = provider.GetService<IDatabasePasswordProvider>()
                ?? throw new InvalidOperationException("You must register an implementation of IDatabasePasswordProvider before calling AddArqanumCore().");
+
+            _ = provider.GetService<ICaptchaTokenProvider>()
+               ?? throw new InvalidOperationException("You must register an implementation of ICaptchaTokenProvider before calling AddArqanumCore().");
 
             _ = provider.GetService<IDeviceInfoProvider>()
                 ?? throw new InvalidOperationException("You must register an implementation of IDeviceInfoProvider before calling AddArqanumCore().");

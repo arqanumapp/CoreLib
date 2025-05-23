@@ -1,4 +1,4 @@
-﻿using CoreLib.Helpers;
+﻿using CoreLib.Interfaces;
 using SQLite;
 
 namespace CoreLib.Storage

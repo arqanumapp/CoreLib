@@ -1,5 +1,5 @@
 ﻿using CoreLib.Crypto;
-using CoreLib.Helpers;
+using CoreLib.Interfaces;
 using CoreLib.Models.Dtos.Device.Add;
 using CoreLib.Models.Entitys;
 using CoreLib.Models.Entitys.Devices;
@@ -181,7 +181,7 @@ namespace CoreLib.Services.Account
                     isStopped = true;
                     await listener.StopAsync();
                 });
-            }); 
+            });
 
             return (new AddDeviceQrCore
             {

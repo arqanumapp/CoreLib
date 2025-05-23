@@ -1,4 +1,5 @@
-﻿using CoreLib.Notifications.Events;
+﻿using CoreLib.Interfaces;
+using CoreLib.Notifications.Events;
 using CoreLib.Storage;
 using MediatR;
 

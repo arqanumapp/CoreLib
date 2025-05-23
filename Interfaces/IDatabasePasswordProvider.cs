@@ -1,4 +1,4 @@
-﻿namespace CoreLib.Helpers
+﻿namespace CoreLib.Interfaces
 {
     public interface IDatabasePasswordProvider
     {

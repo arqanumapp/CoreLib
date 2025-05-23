@@ -1,4 +1,4 @@
-﻿using CoreLib.Helpers;
+﻿using CoreLib.Interfaces;
 using SQLite;
 
 class BaseStorage<T> where T : new()
