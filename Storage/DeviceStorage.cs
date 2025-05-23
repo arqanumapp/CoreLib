@@ -17,6 +17,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var result = await _database.InsertOrReplaceAsync(device);
                 if (device.DeviceKeys != null)
                 {
@@ -35,6 +36,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var result = await _database.InsertOrReplaceAsync(device);
 
                 if (device.DeviceKeys != null)
@@ -55,6 +57,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var device = await _database.Table<Device>().FirstOrDefaultAsync(d => d.CurrentDevice);
 
                 if (device != null)
@@ -74,6 +77,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var devices = await _database.Table<Device>().ToListAsync();
                 return devices;
             }
@@ -87,6 +91,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var device = await _database.Table<Device>().FirstOrDefaultAsync(x => x.Id == id);
                 return device;
             }

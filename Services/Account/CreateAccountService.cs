@@ -2,7 +2,6 @@
 using CoreLib.Helpers;
 using CoreLib.Models.Dtos.Account.Create;
 using CoreLib.Models.Entitys;
-using CoreLib.Models.Entitys.Devices;
 using CoreLib.Storage;
 
 namespace CoreLib.Services.Account
@@ -18,7 +17,7 @@ namespace CoreLib.Services.Account
         IShakeGenerator shakeGenerator,
         IApiService apiService)
     {
-        public async Task<bool> CreateAsync(string nickName)
+        public async Task<bool> CreateAsync(string nickName, IProgress<string>? progress = null)
         {
             try
             {
@@ -26,20 +25,26 @@ namespace CoreLib.Services.Account
                 {
                     NickName = nickName
                 };
-
+                progress?.Report("Generating device keys...");
                 var (deviceData, SPrKSignatire, mLDsaPrK) = await deviceService.CreateAsync(await deviceInfoProvider.GetDeviceName());
 
                 List<PreKey> preKeys = [];
-
                 for (int i = 0; i < 50; i++)
                 {
                     var preKey = await preKeyService.CreateAsync(mLDsaPrK, deviceData.Id);
                     preKeys.Add(preKey);
                 }
-
                 account.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(deviceData.DeviceKeys.SPK, 64));
                 deviceData.AccountId = account.Id;
-                var payload = await CreateRequestDTO(account, deviceData, preKeys, SPrKSignatire);
+
+                var proofOfWorkProgress = new Progress<string>(message =>
+                {
+                    progress?.Report(message);
+                });
+
+                var (nonce, proof) = await proofOfWork.FindProofOfWork(Convert.ToBase64String(deviceData.DeviceKeys.SPK), proofOfWorkProgress);
+
+                var payload = await CreateRequestDTO(account, deviceData, preKeys, SPrKSignatire, proof, nonce);
 
                 var responce = await apiService.PostAsync(payload, mLDsaPrK, "account/register");
 
@@ -64,13 +69,13 @@ namespace CoreLib.Services.Account
             }
             catch (Exception ex)
             {
-                throw new Exception("Error creating account", ex);
+                progress?.Report("Error creating account: " + ex.Message);
+                return false;
             }
         }
 
-        private async Task<CreateAccountRequest> CreateRequestDTO(CoreLib.Models.Entitys.Account account, Device device, List<PreKey> preKeys, byte[] sPrKSignatire)
+        private async Task<CreateAccountRequest> CreateRequestDTO(CoreLib.Models.Entitys.Account account, Models.Entitys.Devices.Device device, List<PreKey> preKeys, byte[] sPrKSignatire, string proof, string nonce)
         {
-            var (nonce, proof) = await proofOfWork.FindProofOfWork(Convert.ToBase64String(device.DeviceKeys.SPK));
             CreateAccountRequest accountRequest = new()
             {
                 Id = account.Id,

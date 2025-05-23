@@ -2,6 +2,6 @@
 {
     public interface IDatabasePasswordProvider
     {
-        string GetDatabasePassword();
+        Task<string> GetDatabasePassword();
     }
 }

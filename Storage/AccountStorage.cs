@@ -14,6 +14,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var result = await _database.InsertAsync(account);
                 return result > 0;
             }
@@ -27,6 +28,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var account = await _database.Table<Account>().FirstOrDefaultAsync();
                 return account;
             }

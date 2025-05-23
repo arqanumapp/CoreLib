@@ -15,6 +15,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var result = await _database.InsertAsync(preKey);
                 return result > 0;
             }
@@ -28,6 +29,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var preKey = await _database.Table<PreKey>().FirstOrDefaultAsync(x => x.Id == id);
                 return preKey;
             }
@@ -41,6 +43,7 @@ namespace CoreLib.Storage
         {
             try
             {
+                await EnsureInitializedAsync();
                 var result = await _database.InsertAllAsync(preKeys);
                 return result > 0;
             }

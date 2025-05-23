@@ -5,11 +5,11 @@ namespace CoreLib.Services
 {
     public interface IProofOfWorkService
     {
-        Task<(string nonce, string hash)> FindProofOfWork(string PK);
+        Task<(string nonce, string hash)> FindProofOfWork(string PK, IProgress<string>? progress = null);
     }
     internal class ProofOfWorkService(IShakeGenerator shakeGenerator) : IProofOfWorkService
     {
-        public async Task<(string nonce, string hash)> FindProofOfWork(string PK)
+        public async Task<(string nonce, string hash)> FindProofOfWork(string PK, IProgress<string>? progress = null)
         {
             using var rng = RandomNumberGenerator.Create();
             var buffer = new byte[4];
@@ -19,6 +19,9 @@ namespace CoreLib.Services
                 rng.GetBytes(buffer);
                 var nonce = BitConverter.ToUInt32(buffer, 0).ToString("X");
                 string hash = Convert.ToBase64String(await shakeGenerator.ComputeHash128Async(PK + nonce)).ToLowerInvariant();
+
+                if (attempts % 100 == 0)
+                    progress?.Report(("PoW: " + hash + nonce));
 
                 if (hash.StartsWith("000"))
                     return (nonce, hash);
