@@ -6,13 +6,16 @@ using CoreLib.Models.Entitys.Devices;
 using CoreLib.Sockets;
 using CoreLib.Storage;
 using MessagePack;
+using System.Text;
+using System.Text.Json;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CoreLib.Services.Account
 {
     public interface IAddDeviceService
     {
         Task<bool> StartDeviceProvisioningAsync(string deviceName, byte[] aesKeyBytes);
-        Task<(AddDeviceQrCore qr, Task listeningTask)> GetDeviceQrData(Func<bool, Task>? onComplete = null);
+        Task<(string qr, Task listeningTask)> GetDeviceQrData(Func<bool, Task>? onComplete = null, CancellationToken cancellationToken = default);
     }
     internal class AddDeviceService(
         IDeviceService deviceService,
@@ -156,7 +159,7 @@ namespace CoreLib.Services.Account
             }
         }
 
-        public async Task<(AddDeviceQrCore qr, Task listeningTask)> GetDeviceQrData(Func<bool, Task>? onComplete = null)
+        public async Task<(string qr, Task listeningTask)> GetDeviceQrData(Func<bool, Task>? onComplete = null, CancellationToken cancellationToken = default)
         {
             var aesKey = await aesGCMKey.GenerateKey();
             var deviceName = await deviceInfoProvider.GetDeviceName();
@@ -168,26 +171,45 @@ namespace CoreLib.Services.Account
 
             var listeningTask = Task.Run(async () =>
             {
-                await listener.StartListeningAsync(channelId, async (responseData) =>
+                try
                 {
-                    if (isStopped)
-                        return;
+                    await listener.StartListeningAsync(channelId, async (responseData) =>
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
 
-                    bool result = await ConfirmDeviceProvisioningAsync(responseData, aesKey);
+                        bool result = await ConfirmDeviceProvisioningAsync(responseData, aesKey);
 
-                    if (onComplete != null)
-                        await onComplete(result);
+                        if (onComplete != null)
+                            await onComplete(result);
 
-                    isStopped = true;
-                    await listener.StopAsync();
-                });
+                        await listener.StopAsync();
+                    });
+
+                    cancellationToken.Register(async () => await listener.StopAsync());
+                }
+                catch (Exception ex)
+                {
+                }
             });
 
-            return (new AddDeviceQrCore
+            
+
+            // Настройки сериализации: без лишних пробелов
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = false
+            };
+
+            // Сериализация
+            string json = JsonSerializer.Serialize(new AddDeviceQrCore
             {
                 Name = deviceName,
                 Key = Convert.ToBase64String(aesKey)
-            }, listeningTask);
+            }, options);
+
+            // Преобразование в Base64
+            return (json, listeningTask);
         }
 
 
