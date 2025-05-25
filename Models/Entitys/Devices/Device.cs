@@ -14,8 +14,6 @@ namespace CoreLib.Models.Entitys.Devices
 
         [NotNull] public string DeviceName { get; set; }
 
-        [NotNull] public string DeviceKeysId { get; set; }
-
         [Ignore] public DeviceKeys DeviceKeys { get; set; }
 
         public bool CurrentDevice { get; set; }

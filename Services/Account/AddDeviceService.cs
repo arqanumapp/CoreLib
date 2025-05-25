@@ -6,9 +6,7 @@ using CoreLib.Models.Entitys.Devices;
 using CoreLib.Sockets;
 using CoreLib.Storage;
 using MessagePack;
-using System.Text;
 using System.Text.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CoreLib.Services.Account
 {
@@ -27,7 +25,8 @@ namespace CoreLib.Services.Account
         IShakeGenerator shakeGenerator,
         IMLDsaKey mLDsaKey,
         IPreKeyStorage preKeyStorage,
-        IApiService apiService) : IAddDeviceService
+        IApiService apiService,
+        DeviceProvisioningListener deviceProvisioningListener) : IAddDeviceService
     {
         public async Task<bool> StartDeviceProvisioningAsync(string deviceName, byte[] aesKeyBytes)
         {
@@ -165,7 +164,6 @@ namespace CoreLib.Services.Account
             var deviceName = await deviceInfoProvider.GetDeviceName();
 
             string channelId = Convert.ToBase64String(await shakeGenerator.ComputeHash256Async(aesKey, 64));
-            var listener = new DeviceProvisioningListener();
 
             var isStopped = false;
 
@@ -173,45 +171,41 @@ namespace CoreLib.Services.Account
             {
                 try
                 {
-                    await listener.StartListeningAsync(channelId, async (responseData) =>
+                    var isConnected = await deviceProvisioningListener.StartListeningAsync(channelId, async (responseData) =>
+                      {
+                          if (cancellationToken.IsCancellationRequested)
+                              return;
+
+                          bool result = await ConfirmDeviceProvisioningAsync(responseData, aesKey);
+
+                          if (onComplete != null)
+                              await onComplete(result);
+
+                          await deviceProvisioningListener.StopAsync();
+                      });
+                    if (!isConnected)
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                            return;
-
-                        bool result = await ConfirmDeviceProvisioningAsync(responseData, aesKey);
-
-                        if (onComplete != null)
-                            await onComplete(result);
-
-                        await listener.StopAsync();
-                    });
-
-                    cancellationToken.Register(async () => await listener.StopAsync());
+                        throw new InvalidOperationException("Failed to connect to device provisioning listener.");
+                    }
+                    cancellationToken.Register(async () => await deviceProvisioningListener.StopAsync());
                 }
                 catch (Exception ex)
                 {
                 }
             });
 
-            
-
-            // Настройки сериализации: без лишних пробелов
             var options = new JsonSerializerOptions
             {
                 WriteIndented = false
             };
 
-            // Сериализация
             string json = JsonSerializer.Serialize(new AddDeviceQrCore
             {
                 Name = deviceName,
                 Key = Convert.ToBase64String(aesKey)
             }, options);
 
-            // Преобразование в Base64
             return (json, listeningTask);
         }
-
-
     }
 }

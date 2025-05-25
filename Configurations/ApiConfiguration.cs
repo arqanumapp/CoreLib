@@ -2,7 +2,7 @@
 {
     internal class ApiConfiguration
     {
-        public string ApiBaseUrl { get; init; } = "https://localhost:7111l/api/";
+        public string ApiBaseUrl { get; init; } = "https://enigram-001-site1.qtempurl.com/api/";
     }
 
 }

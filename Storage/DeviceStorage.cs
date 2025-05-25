@@ -8,50 +8,40 @@ namespace CoreLib.Storage
         Task<bool> SaveDeviceAsync(Device device);
         Task<Device?> GetDeviceAsync(string id);
         Task<Device?> GetCurrentDevice();
-
         Task<List<Device>> GetDevicesList();
     }
     internal class DeviceStorage(IDatabasePasswordProvider passwordProvider) : BaseStorage<Device>(passwordProvider), IDeviceStorage
     {
-        public async Task<bool> AddConnectedDevie(Device device)
-        {
-            try
-            {
-                await EnsureInitializedAsync();
-                var result = await _database.InsertOrReplaceAsync(device);
-                if (device.DeviceKeys != null)
-                {
-                    device.DeviceKeys.DeviceId = device.Id;
-                    await _database.InsertOrReplaceAsync(device.DeviceKeys);
-                }
 
-                return result > 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
         public async Task<bool> SaveDeviceAsync(Device device)
         {
             try
             {
                 await EnsureInitializedAsync();
-                var result = await _database.InsertOrReplaceAsync(device);
 
-                if (device.DeviceKeys != null)
+                bool success = false;
+
+                await _database.RunInTransactionAsync(conn =>
                 {
-                    device.DeviceKeys.DeviceId = device.Id;
-                    await _database.InsertOrReplaceAsync(device.DeviceKeys);
-                }
+                    int result = conn.InsertOrReplace(device);
 
-                return result > 0;
+                    if (device.DeviceKeys != null)
+                    {
+                        device.DeviceKeys.DeviceId = device.Id;
+                        conn.InsertOrReplace(device.DeviceKeys);
+                    }
+
+                    success = result > 0;
+                });
+
+                return success;
             }
             catch
             {
                 return false;
             }
         }
+
 
         public async Task<Device?> GetCurrentDevice()
         {
@@ -93,6 +83,12 @@ namespace CoreLib.Storage
             {
                 await EnsureInitializedAsync();
                 var device = await _database.Table<Device>().FirstOrDefaultAsync(x => x.Id == id);
+
+                if (device != null)
+                {
+                    device.DeviceKeys = await _database.Table<DeviceKeys>().FirstOrDefaultAsync(k => k.DeviceId == device.Id);
+                }
+
                 return device;
             }
             catch
@@ -100,5 +96,6 @@ namespace CoreLib.Storage
                 return null;
             }
         }
+
     }
 }

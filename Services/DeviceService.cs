@@ -29,7 +29,7 @@ namespace CoreLib.Services
                 byte [] SPKSignature = await mLDsaKey.SignAsync(device.DeviceKeys.SPK, MlDsaPrK);
 
                 device.Id = await shakeGenerator.ToBase64StringAsync(await shakeGenerator.ComputeHash256Async(device.DeviceKeys.SPK, 64));
-
+                device.DeviceKeys.DeviceId = device.Id;
                 return (device, SPKSignature, MlDsaPrK);
             }
             catch (Exception ex)

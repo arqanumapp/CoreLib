@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using CoreLib.Configurations;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace CoreLib.Sockets
 {
-    public class DeviceProvisioningListener
+    internal class DeviceProvisioningListener(ApiConfiguration apiConfiguration)
     {
         private HubConnection? _connection;
 

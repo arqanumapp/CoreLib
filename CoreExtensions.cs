@@ -5,6 +5,7 @@ using CoreLib.Notifications;
 using CoreLib.Notifications.Handlers;
 using CoreLib.Services;
 using CoreLib.Services.Account;
+using CoreLib.Sockets;
 using CoreLib.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -60,6 +61,8 @@ namespace CoreLib
             services.AddTransient<IAddDeviceService, AddDeviceService>();
 
             services.AddTransient<CreateAccountService>();
+
+            services.AddTransient<DeviceProvisioningListener>();
             return services;
         }
         public static IServiceCollection AddArqanumCore(this IServiceCollection services)

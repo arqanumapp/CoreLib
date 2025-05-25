@@ -1,4 +1,5 @@
 ﻿using CoreLib.Interfaces;
+using CoreLib.Models.Entitys.Devices;
 using SQLite;
 
 class BaseStorage<T> where T : new()
@@ -11,7 +12,7 @@ class BaseStorage<T> where T : new()
     {
         _passwordProvider = passwordProvider;
         string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string databasePath = Path.Combine(folderPath, "AppStorage5.db");
+        string databasePath = Path.Combine(folderPath, "AppStorage.db");
         _database = new SQLiteAsyncConnection(databasePath);
 
         _initialization = new Lazy<Task>(InitializeAsync);
@@ -22,6 +23,10 @@ class BaseStorage<T> where T : new()
         string password = await _passwordProvider.GetDatabasePassword();
         await _database.ExecuteAsync($"PRAGMA key = '{password}';");
         await _database.CreateTableAsync<T>();
+        if (typeof(T) == typeof(Device))
+        {
+            await _database.CreateTableAsync<DeviceKeys>();
+        }
     }
 
     protected async Task EnsureInitializedAsync() => await _initialization.Value;

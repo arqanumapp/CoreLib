@@ -47,10 +47,13 @@ namespace CoreLib.Services.Account
 
                 var payload = await CreateRequestDTO(account, deviceData, preKeys, SPrKSignatire, proof, nonce);
 
+                progress?.Report("Registration...");
+
                 var responce = await apiService.PostAsync(payload, mLDsaPrK, "account/register");
 
                 if (responce.IsSuccessStatusCode)
                 {
+                    progress?.Report("Registration successful!");
                     if (!await accountStorage.SaveAccountAsync(account))
                     {
                         throw new Exception("Error saving account");
@@ -66,7 +69,7 @@ namespace CoreLib.Services.Account
                         throw new Exception("Error saving prekeys");
                     }
                 }
-                return true;
+                return responce.IsSuccessStatusCode;
             }
             catch (Exception ex)
             {
@@ -82,9 +85,9 @@ namespace CoreLib.Services.Account
                 Id = account.Id,
                 Username = account.NickName,
                 ProofOfWork = proof,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Nonce = nonce,
                 ChaptchaToken = await captchaTokenProvider.GetCaptchaTokenAsync() ?? throw new ArgumentNullException("hCaptcha token missing."),
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Device = new RegisterDeviceRequest
                 {
                     Id = device.Id,
