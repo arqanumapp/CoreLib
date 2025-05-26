@@ -6,6 +6,7 @@ using CoreLib.Models.Entitys.Devices;
 using CoreLib.Sockets;
 using CoreLib.Storage;
 using MessagePack;
+using System.Collections.Immutable;
 using System.Text.Json;
 
 namespace CoreLib.Services.Account
@@ -36,6 +37,7 @@ namespace CoreLib.Services.Account
 
                 var account = await accountStorage.GetAccountAsync() ?? throw new ArgumentNullException("Account not found");
                 var currentDevice = await deviceStorage.GetCurrentDevice() ?? throw new ArgumentNullException("Current device not found");
+                var trustedDevices = await deviceStorage.GetDevicesList();
                 var privatePayload = new NewDevicePrivatePayloadRequest
                 {
                     Name = deviceName,
@@ -43,6 +45,15 @@ namespace CoreLib.Services.Account
                     DeviceId = device.Id,
                     SPK = device.DeviceKeys.SPK,
                     SPrK = device.DeviceKeys.SPrK,
+                    PK = device.DeviceKeys.PK,
+                    PrK = device.DeviceKeys.PrK,
+                    TrustedDevices = [.. trustedDevices.Select(x => new TrustedDevice
+                    {
+                        DeviceId = x.Id,
+                        Name = x.DeviceName,
+                        SPK = x.DeviceKeys.SPK,
+                        PK = x.DeviceKeys.PK
+                    })]
                 };
 
                 var publicPayload = new NewDevicePublicPayloadRequest
@@ -125,6 +136,7 @@ namespace CoreLib.Services.Account
 
                     DeviceTrustedSignature = trustedSignatureBytes
                 };
+
                 request.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 var response = await apiService.PostAsync(request, deviceSPrK, "device/confirm");
 
@@ -144,6 +156,8 @@ namespace CoreLib.Services.Account
                         {
                             SPK = publicPayload.SPK,
                             SPrK = privatePayload.SPrK,
+                            PK = privatePayload.PK,
+                            PrK = privatePayload.PrK,
                         },
                         AccountId = publicPayload.AccountId,
                     });

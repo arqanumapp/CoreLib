@@ -8,14 +8,14 @@ namespace CoreLib.Services
     {
         Task<(Device device, byte[] SPKSignature, MLDsaPrivateKeyParameters mlDsaPrK)> CreateAsync(string deviceName);
     }
-    internal class DeviceService(IMLDsaKey mLDsaKey, IShakeGenerator shakeGenerator, INotificationService notificationService) : IDeviceService
+    internal class DeviceService(IMLDsaKey mLDsaKey, IMLKemKey mLKemKey, IShakeGenerator shakeGenerator, INotificationService notificationService) : IDeviceService
     {
         public async Task<(Device device, byte[] SPKSignature, MLDsaPrivateKeyParameters mlDsaPrK)> CreateAsync(string deviceName)
         {
             try
             {
                 var (mLDsaPK, MlDsaPrK) = await mLDsaKey.GenerateKeyPairAsync();
-
+                var (mLKemPK, mLKemPrK) = await mLKemKey.GenerateKeyPairAsync();
                 Device device = new()
                 {
                     DeviceName = deviceName,
@@ -23,6 +23,8 @@ namespace CoreLib.Services
                     {
                         SPK = mLDsaPK.GetEncoded(),
                         SPrK = MlDsaPrK.GetEncoded(),
+                        PK = mLKemPK.GetEncoded(),
+                        PrK = mLKemPrK.GetEncoded()
                     },
                 };
 

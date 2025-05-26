@@ -2,11 +2,12 @@
 using CoreLib.Interfaces;
 using CoreLib.Models.Dtos.Account.Create;
 using CoreLib.Models.Entitys;
+using CoreLib.Models.ViewModels.Account;
 using CoreLib.Storage;
 
 namespace CoreLib.Services.Account
 {
-    public class CreateAccountService(
+    public class AccountService(
         IDeviceInfoProvider deviceInfoProvider,
         IDeviceService deviceService,
         IPreKeyService preKeyService,
@@ -58,7 +59,7 @@ namespace CoreLib.Services.Account
                     {
                         throw new Exception("Error saving account");
                     }
-
+                    
                     if (!await deviceStorage.SaveDeviceAsync(deviceData))
                     {
                         throw new Exception("Error saving device");
@@ -77,7 +78,16 @@ namespace CoreLib.Services.Account
                 return false;
             }
         }
-
+        public async Task<AccountInfoViewModel> GetAccountInfoAsync()
+        {
+            var account = await accountStorage.GetAccountAsync() ?? throw new ArgumentNullException("Account not found");
+            var model = new AccountInfoViewModel
+            {
+                NickName = account.NickName,
+                AccountId = account.Id
+            };
+            return model;
+        }
         private async Task<CreateAccountRequest> CreateRequestDTO(CoreLib.Models.Entitys.Account account, Models.Entitys.Devices.Device device, List<PreKey> preKeys, byte[] sPrKSignatire, string proof, string nonce)
         {
             CreateAccountRequest accountRequest = new()

@@ -10,5 +10,9 @@ namespace CoreLib.Models.Entitys.Devices
         [NotNull] public byte[] SPK { get; set; }
 
         public byte[] SPrK { get; set; }
+
+        [NotNull] public byte[] PK { get; set; }
+
+        public byte[] PrK { get; set; }
     }
 }

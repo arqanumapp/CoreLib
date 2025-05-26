@@ -60,7 +60,7 @@ namespace CoreLib
             services.AddTransient<IProofOfWorkService, ProofOfWorkService>();
             services.AddTransient<IAddDeviceService, AddDeviceService>();
 
-            services.AddTransient<CreateAccountService>();
+            services.AddTransient<AccountService>();
 
             services.AddTransient<DeviceProvisioningListener>();
             return services;
